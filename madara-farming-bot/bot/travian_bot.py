@@ -1,42 +1,47 @@
 # bot/travian_bot.py
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import WebDriverException
 import time
 
 def get_farm_lists(username, password, server_url, proxy_ip, proxy_port, proxy_user, proxy_pass):
-    options = Options()
-    options.headless = True
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--no-sandbox')
 
-    if proxy_ip and proxy_port:
+    # Optional: Proxy
+    if proxy_ip and proxy_port and proxy_user and proxy_pass:
         proxy = f"http://{proxy_user}:{proxy_pass}@{proxy_ip}:{proxy_port}"
-        options.add_argument(f'--proxy-server={proxy}')
-
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        chrome_options.add_argument(f'--proxy-server={proxy}')
 
     try:
+        driver = webdriver.Chrome(options=chrome_options)
         driver.get(server_url)
         time.sleep(3)
 
-        # Füllt das Login-Formular aus
+        # Login
         driver.find_element(By.NAME, "name").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
         driver.find_element(By.NAME, "s1").click()
         time.sleep(3)
 
-        # Prüfe auf Fehlermeldung
+        # Prüfung ob Login erfolgreich
         if "login" in driver.current_url or "fehler" in driver.page_source.lower():
             raise Exception("Travian Login failed")
 
-        # Dummy-Farm-Liste für Testzwecke
+        # Beispiel: Dummy Farm Listen (Hardcoded)
         farm_lists = ["Farm A", "Farm B", "Farm C"]
         return farm_lists
 
+    except WebDriverException as e:
+        raise Exception(f"Selenium WebDriver failed: {str(e)}")
     except Exception as e:
-        raise Exception(f"Bot error: {e}")
-
+        raise Exception(f"Login failed or other error: {str(e)}")
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except:
+            pass
