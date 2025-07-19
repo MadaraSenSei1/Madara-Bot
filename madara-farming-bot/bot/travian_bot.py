@@ -46,6 +46,11 @@ def run_bot(username, password, proxy, interval_min, interval_max, server_url):
 
 
 def get_farm_lists(username, password, proxy, server_url):
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.chrome.options import Options
+    import time
+
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -58,30 +63,35 @@ def get_farm_lists(username, password, proxy, server_url):
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
-        print("🔐 Farm-List-Abruf startet...")
+        print("🌐 Starte Login...")
         driver.get("https://www.travian.com/international")
         time.sleep(2)
 
         driver.find_element(By.LINK_TEXT, "Login").click()
         time.sleep(2)
+
         driver.find_element(By.NAME, "name").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         time.sleep(5)
 
-        # Rufe die Farm-Listen-Seite des angegebenen Servers auf
-        driver.get(f"https://{server_url}/build.php?id=39")
-        time.sleep(3)
+        print("✅ Eingeloggt.")
 
-        # Scrape Farm-Listenelemente
+        # Navigiere zur Farm-Listenseite auf dem spezifischen Server
+        farmlist_url = f"{server_url}/build.php?id=39"
+        print(f"📂 Lade Farm-Liste von {farmlist_url}")
+        driver.get(farmlist_url)
+        time.sleep(2)
+
+        # Sammle Farm-Namen (Classname ggf. anpassen, je nach Sprache/Server)
         farm_elements = driver.find_elements(By.CLASS_NAME, "raidListSlotTitle")
         farms = [el.text for el in farm_elements if el.text.strip() != ""]
 
-        print(f"🌾 Farm-Listen gefunden: {farms}")
+        print(f"📦 Farm-Listen gefunden: {farms}")
         return farms
 
     except Exception as e:
-        print(f"⚠️ Fehler beim Abrufen der Farm-Listen: {e}")
+        print(f"❌ Fehler beim Laden der Farm-Listen: {e}")
         return []
 
     finally:
