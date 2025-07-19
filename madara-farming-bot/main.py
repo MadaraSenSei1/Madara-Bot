@@ -2,14 +2,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from bot.travian_bot import get_farm_lists
-import uvicorn
 
 app = FastAPI()
 
 # CORS erlauben
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # für Sicherheit besser Domains einschränken
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -18,7 +17,6 @@ app.add_middleware(
 @app.post("/login")
 async def login(request: Request):
     data = await request.json()
-
     try:
         result = get_farm_lists(
             data["username"],
@@ -33,5 +31,7 @@ async def login(request: Request):
     except Exception as e:
         return JSONResponse(content={"success": False, "error": str(e)})
 
+# nur für lokalen Test, Render ignoriert das
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=10000)
