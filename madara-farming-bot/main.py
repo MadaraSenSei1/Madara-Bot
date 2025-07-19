@@ -30,34 +30,11 @@ async def login(request: Request):
         return {"success": True, "farmLists": farm_lists}
     except Exception as e:
         return {"success": False, "error": str(e)}
-    try:
-        # Attempt to login using TravianBot
-        farm_lists = get_farm_lists(username, password, server_url, proxy_ip, proxy_port, proxy_user, proxy_pass)
 
-        # Save session
-        user_sessions[username] = {
-            "password": password,
-            "server_url": server_url,
-            "proxy": {
-                "ip": proxy_ip,
-                "port": proxy_port,
-                "username": proxy_user,
-                "password": proxy_pass
-            }
-        }
-
-        return JSONResponse({"message": "ok", "farm_lists": farm_lists})
-    
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=502)
-
-
-@app.get("/farmlist")
+# Optionaler GET-Endpoint für Farm-Listen mit Query-Parametern
+@app.get("/farmlists")
 async def get_farmlist(username: str = Query(...)):
-    if username not in user_sessions:
-        raise HTTPException(status_code=401, detail="Not logged in")
-
-    conf = user_sessions[username]
+    return {"message": f"Farm lists for {username} (dummy endpoint)"}
 
     try:
         farms = get_farm_lists(
