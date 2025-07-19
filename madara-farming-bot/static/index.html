@@ -4,103 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Travian Farming Bot</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    async function loginUser() {
+      const formData = new FormData();
+      formData.append("username", document.getElementById("username").value);
+      formData.append("password", document.getElementById("password").value);
+      formData.append("server_url", document.getElementById("server_url").value);
+      formData.append("proxy_ip", document.getElementById("proxy_ip").value);
+      formData.append("proxy_port", document.getElementById("proxy_port").value);
+      formData.append("proxy_user", document.getElementById("proxy_user").value);
+      formData.append("proxy_pass", document.getElementById("proxy_pass").value);
+
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          body: formData
+        });
+
+        const result = await response.json();
+        const msg = document.getElementById("login-message");
+
+        if (response.ok) {
+          msg.style.color = "green";
+          msg.textContent = "✅ Login erfolgreich!";
+        } else {
+          msg.style.color = "red";
+          msg.textContent = "❌ Fehler: " + (result.error || "Unbekannter Fehler");
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("login-message").textContent = "Netzwerkfehler!";
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f3f3;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-4 text-center">Travian Farming Bot</h1>
+<body>
 
-    <!-- Login Form -->
-    <form id="loginForm" class="bg-white p-6 rounded shadow-md space-y-4 mb-6">
-      <h2 class="text-xl font-semibold">Login</h2>
-      <div class="grid grid-cols-2 gap-4">
-        <input name="username" placeholder="Username" required class="border p-2 rounded"/>
-        <input name="password" type="password" placeholder="Password" required class="border p-2 rounded"/>
-        <input name="server_url" placeholder="Server URL (e.g. https://ts9.x1.europe.travian.com)" required class="border p-2 rounded col-span-2"/>
-      </div>
-      <div class="grid grid-cols-4 gap-2">
-        <input name="proxy_ip" placeholder="Proxy IP" class="border p-2 rounded"/>
-        <input name="proxy_port" placeholder="Port" class="border p-2 rounded"/>
-        <input name="proxy_user" placeholder="Username" class="border p-2 rounded"/>
-        <input name="proxy_pass" placeholder="Password" class="border p-2 rounded"/>
-      </div>
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
-    </form>
+  <h2>Travian Farming Bot – Login</h2>
 
-    <!-- Status + Logout -->
-    <div id="statusBox" class="hidden bg-white p-6 rounded shadow-md mb-4">
-      <div class="flex justify-between items-center mb-2">
-        <div>
-          <p><strong>Username:</strong> <span id="statusUsername"></span></p>
-          <p><strong>Server:</strong> <span id="statusServer"></span></p>
-        </div>
-        <button onclick="logout()" class="bg-red-500 text-white px-4 py-1 rounded">Logout</button>
-      </div>
-
-      <!-- Raid Interval Settings -->
-      <div class="mb-4">
-        <label class="block mb-1">Min Interval (min)</label>
-        <input id="interval_min" class="border p-2 rounded w-full" type="number" value="10">
-        <label class="block mt-2 mb-1">Max Interval (min)</label>
-        <input id="interval_max" class="border p-2 rounded w-full" type="number" value="15">
-      </div>
-
-      <!-- Farm Lists -->
-      <div class="mb-4">
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="text-lg font-semibold">Farm Lists</h3>
-          <button onclick="fetchFarmLists()" class="text-green-600">🔄 Refresh</button>
-        </div>
-        <ul id="farmListDisplay" class="border p-3 rounded bg-gray-50 text-sm text-red-500">
-          Loading...
-        </ul>
-      </div>
-
-      <!-- Start Bot -->
-      <div class="text-center">
-        <button onclick="startBot()" class="bg-blue-500 text-white px-4 py-2 rounded">Start Bot</button>
-      </div>
-    </div>
+  <div class="form-group">
+    <label>Username:</label>
+    <input type="text" id="username" />
   </div>
 
-  <script>
-    let usernameGlobal = '';
+  <div class="form-group">
+    <label>Password:</label>
+    <input type="password" id="password" />
+  </div>
 
-    document.getElementById('loginForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      usernameGlobal = formData.get('username');
+  <div class="form-group">
+    <label>Server URL (z. B. https://ts9.x1.europe.travian.com):</label>
+    <input type="text" id="server_url" />
+  </div>
 
-      const res = await fetch('/login', {
-        method: 'POST',
-        body: formData,
-      });
+  <div class="form-group">
+    <label>Proxy IP:</label>
+    <input type="text" id="proxy_ip" />
+  </div>
 
-      if (res.ok) {
-        document.getElementById('loginForm').classList.add('hidden');
-        document.getElementById('statusBox').classList.remove('hidden');
-        document.getElementById('statusUsername').innerText = usernameGlobal;
-        document.getElementById('statusServer').innerText = formData.get('server_url');
-        fetchFarmLists();
-      } else {
-        alert('Login failed');
-      }
-    });
+  <div class="form-group">
+    <label>Proxy Port:</label>
+    <input type="text" id="proxy_port" />
+  </div>
 
-    async function fetchFarmLists() {
-      const res = await fetch(`/farmlist?username=${usernameGlobal}`);
-      const display = document.getElementById('farmListDisplay');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.farms.length === 0) {
-          display.innerHTML = '<li>No farm lists found.</li>';
-        } else {
-          display.innerHTML = '';
-          data.farms.forEach(farm => {
-            const li = document.createElement('li');
-            li.textContent = farm;
-            display.appendChild(li);
-          });
-        }
-      } else {
-        display.innerHTML = '<li class="text-red-600">❌ Failed to load
+  <div class="form-group">
+    <label>Proxy Username:</label>
+    <input type="text" id="proxy_user" />
+  </div>
+
+  <div class="form-group">
+    <label>Proxy Password:</label>
+    <input type="text" id="proxy_pass" />
+  </div>
+
+  <button onclick="loginUser()">Login</button>
+
+  <p id="login-message" style="margin-top: 10px;"></p>
+
+</body>
+</html>
