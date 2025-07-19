@@ -5,38 +5,47 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
-def get_farm_lists(
-    username: str,
-    password: str,
-    server_url: str,
-    proxy: dict
-) -> list:
-    """Log in headlessly and scrape the farm‐list names."""
-    chrome_opts = Options()
-    chrome_opts.add_argument("--headless")
-    chrome_opts.add_argument("--no-sandbox")
-    if proxy.get("ip") and proxy.get("port"):
-        chrome_opts.add_argument(f"--proxy-server=http://{proxy['ip']}:{proxy['port']}")
-
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_opts)
+def get_farm_lists(username, password, server_url, proxy_ip="", proxy_port="", proxy_user="", proxy_pass=""):
     try:
-        # 1) Login
-        driver.get(f"{server_url}/login.php")
+        # Setup Selenium with proxy (if provided)
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+
+        if proxy_ip and proxy_port:
+            proxy_auth = f"{proxy_user}:{proxy_pass}@" if proxy_user and proxy_pass else ""
+            chrome_options.add_argument(f'--proxy-server=http://{proxy_auth}{proxy_ip}:{proxy_port}')
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
+        # Login to Travian
+        driver.get(server_url)
         time.sleep(2)
+
         driver.find_element(By.NAME, "name").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
-        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        driver.find_element(By.XPATH, '//button[@type="submit"]').click()
         time.sleep(5)
 
-        # 2) Navigate to farm‐list (build page 39)
-        driver.get(f"{server_url}/build.php?id=39")
-        time.sleep(2)
+        # Navigate to farm list page
+        driver.get(f"{server_url}/build.php?tt=99")
+        time.sleep(3)
 
-        # 3) Scrape list titles
-        elems = driver.find_elements(By.CLASS_NAME, "raidListSlotTitle")
-        return [e.text.strip() for e in elems if e.text.strip()]
-    finally:
+        farm_lists = []
+        list_elements = driver.find_elements(By.CLASS_NAME, "raidList")
+
+        for el in list_elements:
+            name = el.find_element(By.CLASS_NAME, "listTitleText").text
+            farm_lists.append(name)
+
         driver.quit()
+        return farm_lists
+
+    except Exception as e:
+        driver.quit()
+        raise Exception(f"Travian error: {str(e)}")
+
 
 def run_bot(
     username: str,
