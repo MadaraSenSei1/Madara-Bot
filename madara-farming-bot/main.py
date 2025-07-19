@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Form, Query, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from bot.travian_bot import get_farm_lists, run_bot
 import threading
 
