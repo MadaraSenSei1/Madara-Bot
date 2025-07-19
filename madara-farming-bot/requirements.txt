@@ -3,3 +3,4 @@ selenium
 chromedriver-autoinstaller
 fastapi
 python-multipart
+uvicorn
