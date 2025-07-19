@@ -1,10 +1,17 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Form
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.requests import Request
 from bot.travian_bot import get_farm_lists
 
 app = FastAPI()
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+# Static files (HTML)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
 
 @app.post("/login")
 async def login(
