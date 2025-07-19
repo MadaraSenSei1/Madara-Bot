@@ -88,3 +88,39 @@ async def stop_bot(data: BotControlRequest):
         active_bots[data.account_id]["task"] = None
 
     return {"status": "Bot stopped"}
+from fastapi import Query
+import time
+
+# Wir speichern den nächsten Raid-Zeitpunkt pro Account
+# (optional: persistent in Datei oder Redis)
+for bot in active_bots.values():
+    bot["next_run"] = None
+
+@app.get("/bot-status")
+async def bot_status(account_id: str = Query(...)):
+    entry = active_bots.get(account_id)
+    if not entry:
+        return {"active": False}
+
+    task = entry.get("task")
+    is_active = task is not None and not task.done()
+    return {
+        "active": is_active,
+        "next_raid_timestamp": entry.get("next_run")
+    }
+        def update_next_run():
+        now = int(time.time())
+        wait_min = data.interval_min * 60
+        wait_max = data.interval_max * 60
+        wait_time = (wait_min + (wait_max - wait_min) * bot.random_float())
+        if data.random_delay:
+            wait_time += bot.random_offset()
+        entry["next_run"] = now + int(wait_time)
+        return wait_time
+
+    async def bot_loop():
+        while True:
+            await asyncio.to_thread(bot.send_farms)
+            wait_time = update_next_run()
+            await asyncio.sleep(wait_time)
+
