@@ -26,6 +26,9 @@ async def root():
     return FileResponse("static/index.html")
 
 
+from fastapi import FastAPI, Request
+import traceback
+
 @app.post("/login")
 async def login(request: Request):
     data = await request.json()
@@ -41,10 +44,9 @@ async def login(request: Request):
         )
         return {"success": True, "farmLists": farm_lists}
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
+        # WICHTIG: Fehlerausgabe für Debugging
         print("=== LOGIN ERROR ===")
-        print(error_details)
+        traceback.print_exc()
         return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
