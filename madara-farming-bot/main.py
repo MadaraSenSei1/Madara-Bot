@@ -42,9 +42,10 @@ async def login(request: Request):
         return {"success": True, "farmLists": farm_lists}
     except Exception as e:
         import traceback
-        error_message = traceback.format_exc()
-        print(error_message)  # 💡 wichtig für Render-Logs!
-        return {"success": False, "error": error_message}
+        error_details = traceback.format_exc()
+        print("=== LOGIN ERROR ===")
+        print(error_details)
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
