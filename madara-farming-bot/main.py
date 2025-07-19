@@ -1,15 +1,11 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from bot.travian_bot import get_farm_lists
-import uvicorn
-import threading
 
 app = FastAPI()
 
-# Middleware für CORS
+# CORS aktivieren
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,37 +13,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 👉 Static Files mounten
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# 👉 index.html bei Root-Route ausliefern
-@app.get("/")
-async def root():
-    return FileResponse("static/index.html")
-
-
-from fastapi import FastAPI, Request
-import traceback
+class LoginData(BaseModel):
+    username: str
+    password: str
+    server_url: str
+    proxy_ip: str = ""
+    proxy_port: str = ""
+    proxy_user: str = ""
+    proxy_pass: str = ""
 
 @app.post("/login")
-async def login(request: Request):
-    data = await request.json()
+async def login(data: LoginData):
     try:
         farm_lists = get_farm_lists(
-            username=data["username"],
-            password=data["password"],
-            server_url=data["server_url"],
-            proxy_ip=data["proxy_ip"],
-            proxy_port=data["proxy_port"],
-            proxy_user=data["proxy_user"],
-            proxy_pass=data["proxy_pass"]
+            username=data.username,
+            password=data.password,
+            server_url=data.server_url,
+            proxy_ip=data.proxy_ip,
+            proxy_port=data.proxy_port,
+            proxy_user=data.proxy_user,
+            proxy_pass=data.proxy_pass
         )
         return {"success": True, "farmLists": farm_lists}
     except Exception as e:
-        # WICHTIG: Fehlerausgabe für Debugging
-        print("=== LOGIN ERROR ===")
-        traceback.print_exc()
+        print("Login failed:", e)
         return {"success": False, "error": str(e)}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
