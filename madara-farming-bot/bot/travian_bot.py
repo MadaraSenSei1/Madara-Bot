@@ -1,4 +1,4 @@
-import time
+##import time
 import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -13,7 +13,7 @@ def get_farm_lists(username, password, server_url, proxy_ip="", proxy_port="", p
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    if proxy_ip and proxy_port:
+   if proxy_ip and proxy_port:
     if proxy_user and proxy_pass:
         chrome_options.add_argument(f'--proxy-server=http://{proxy_user}:{proxy_pass}@{proxy_ip}:{proxy_port}')
     else:
