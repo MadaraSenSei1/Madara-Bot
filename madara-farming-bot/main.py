@@ -1,91 +1,76 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import asyncio
-import random
-import threading
+from fastapi import FastAPI, Form
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-from bot.travian_bot import login_and_fetch_farms, run_farming_bot
+# <-- hier die korrigierten Importe:
+from bot.travian_bot import get_farm_lists, run_bot
 
 app = FastAPI()
 
-# CORS für dein HTML-Frontend zulassen
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# statische Dateien (HTML/CSS/JS) ausliefern
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Globale Variablen zur Zwischenspeicherung
-session_data = {}
-bot_thread = None
+# Session‑Store
+user_sessions = {}
 
-# Datenmodelle
-class LoginData(BaseModel):
-    username: str
-    password: str
-    server_url: str
-    proxy: dict
-
-class BotInterval(BaseModel):
-    interval_min: int
-    interval_max: int
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    return FileResponse("static/index.html")
 
 @app.post("/login")
-async def login(data: LoginData):
-    try:
-        farms = login_and_fetch_farms(
-            data.username, data.password, data.server_url, data.proxy
-        )
-        session_data["username"] = data.username
-        session_data["password"] = data.password
-        session_data["server_url"] = data.server_url
-        session_data["proxy"] = data.proxy
-        session_data["farms"] = farms
-        return {"success": True, "farms": farms}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+async def login(
+    username: str = Form(...),
+    password: str = Form(...),
+    server_url: str = Form(...),
+    proxy_ip: str = Form(""),
+    proxy_port: str = Form(""),
+    proxy_user: str = Form(""),
+    proxy_pass: str = Form(""),
+):
+    user_sessions[username] = {
+        "password": password,
+        "server_url": server_url,
+        "proxy": {
+            "ip": proxy_ip,
+            "port": proxy_port,
+            "username": proxy_user,
+            "password": proxy_pass
+        }
+    }
+    return JSONResponse({"message": "Login saved"})
 
-@app.get("/get-farms")
-async def get_farms():
-    try:
-        farms = login_and_fetch_farms(
-            session_data["username"],
-            session_data["password"],
-            session_data["server_url"],
-            session_data["proxy"]
-        )
-        session_data["farms"] = farms
-        return {"farms": farms}
-    except Exception as e:
-        return {"error": str(e)}
+@app.get("/farmlist")
+async def get_farmlist(username: str):
+    if username not in user_sessions:
+        return JSONResponse({"error": "Not logged in"}, status_code=403)
+    sess = user_sessions[username]
+    farms = get_farm_lists(
+        username,
+        sess["password"],
+        sess["proxy"],
+        sess["server_url"]
+    )
+    return JSONResponse({"farms": farms})
 
 @app.post("/start-bot")
-async def start_bot(interval: BotInterval):
-    try:
-        def bot_loop():
-            while True:
-                wait_minutes = random.randint(interval.interval_min, interval.interval_max)
-                wait_seconds = random.randint(0, 30)
-                total_seconds = wait_minutes * 60 + wait_seconds
+async def start_bot(
+    username: str = Form(...),
+    interval_min: int = Form(...),
+    interval_max: int = Form(...),
+):
+    if username not in user_sessions:
+        return JSONResponse({"error": "Not logged in"}, status_code=403)
+    sess = user_sessions[username]
+    run_bot(
+        username,
+        sess["password"],
+        sess["proxy"],
+        interval_min,
+        interval_max,
+        sess["server_url"]
+    )
+    return JSONResponse({"message": "Bot started"})
 
-                run_farming_bot(
-                    session_data["username"],
-                    session_data["password"],
-                    session_data["server_url"],
-                    session_data["proxy"]
-                )
-                asyncio.run(asyncio.sleep(total_seconds))
-
-        global bot_thread
-        if bot_thread and bot_thread.is_alive():
-            return {"message": "Bot already running"}
-        bot_thread = threading.Thread(target=bot_loop, daemon=True)
-        bot_thread.start()
-
-        return {"status": "started", "next_delay_seconds": interval.interval_min * 60 + random.randint(0, 30)}
-    except Exception as e:
-        return {"error": str(e)}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
