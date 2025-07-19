@@ -8,7 +8,11 @@ import threading
 app = FastAPI()
 
 # 1) Serve our React/vanilla static bundle:
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(...))
+@app.get("/")
+@app.post("/login")
+@app.get("/farmlist")
+@app.post("/start-bot")
 
 # 2) In‑memory session store:
 user_sessions: dict[str, dict] = {}
