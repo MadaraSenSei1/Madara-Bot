@@ -2,7 +2,9 @@ fastapi
 uvicorn
 selenium
 python-dotenv
-requests
 pydantic
+httpx
+requests
 websockets
-typing_extensions
+aiofiles
+jinja2
