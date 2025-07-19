@@ -1,7 +1,9 @@
-flask
-selenium
-chromedriver-autoinstaller
 fastapi
-python-multipart
 uvicorn
+selenium
+python-multipart
+pyppeteer
+pydantic
+requests
 webdriver-manager
+httpx
