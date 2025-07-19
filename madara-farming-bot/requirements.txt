@@ -1,4 +1,5 @@
-fastapi
 flask
 selenium
 chromedriver-autoinstaller
+fastapi
+python-multipart
