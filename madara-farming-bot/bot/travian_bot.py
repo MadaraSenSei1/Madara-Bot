@@ -6,9 +6,9 @@ import random
 
 def run_bot(username, password, proxy, interval_min, interval_max):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--no-sandbox')
 
     # Proxy einfügen, falls vorhanden
     if proxy and proxy["ip"] and proxy["port"]:
@@ -18,7 +18,7 @@ def run_bot(username, password, proxy, interval_min, interval_max):
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
-        print("🔐 Logge ein …")
+        print("🔐 Logge ein →")
         driver.get("https://www.travian.com/international")
 
         time.sleep(3)
@@ -34,5 +34,11 @@ def run_bot(username, password, proxy, interval_min, interval_max):
         print("✅ Eingeloggt!")
 
         # Hier später: Farm-Listen Seite aufrufen
-        print("📄 Öffne Farm-Listen-Seite (Platzhalter)")
-        # Beispiel: driver.get("https://yourserver.travian.com/build.php?id=39
+        print("📦 Öffne Farm-Listen-Seite (Platzhalter)")
+        # Beispiel: driver.get("https://yourserver.travian.com/build.php?id=39")
+
+    except Exception as e:
+        print("❌ Fehler beim Einloggen:", e)
+
+    finally:
+        driver.quit()
