@@ -1,24 +1,25 @@
+<!-- static/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Travian Bot Login</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Travian Bot</title>
 </head>
-<body class="bg-gray-100">
-  <div class="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow">
-    <h2 class="text-2xl font-bold mb-6 text-center">Farm Bot Login</h2>
-    <form id="login-form" class="space-y-4">
-      <input type="text" name="username" placeholder="Username" required class="w-full px-3 py-2 border rounded"/>
-      <input type="password" name="password" placeholder="Password" required class="w-full px-3 py-2 border rounded"/>
-      <input type="text" name="server_url" placeholder="Server URL" required class="w-full px-3 py-2 border rounded"/>
-      <input type="text" name="proxy_ip" placeholder="Proxy IP" class="w-full px-3 py-2 border rounded"/>
-      <input type="text" name="proxy_port" placeholder="Proxy Port" class="w-full px-3 py-2 border rounded"/>
-      <input type="text" name="proxy_user" placeholder="Proxy Username" class="w-full px-3 py-2 border rounded"/>
-      <input type="password" name="proxy_pass" placeholder="Proxy Password" class="w-full px-3 py-2 border rounded"/>
-      <button type="submit" class="bg-blue-500 text-white w-full py-2 rounded hover:bg-blue-600">Login</button>
-    </form>
+<body>
+  <h1>Travian Farming Bot</h1>
+  <form action="/login" method="post">
+    <input type="text" name="username" placeholder="Username" required /><br />
+    <input type="password" name="password" placeholder="Password" required /><br />
+    <input type="text" name="server_url" placeholder="https://ts1.example.com" required /><br />
+    <input type="text" name="proxy_ip" placeholder="Proxy IP" /><br />
+    <input type="text" name="proxy_port" placeholder="Proxy Port" /><br />
+    <input type="text" name="proxy_user" placeholder="Proxy User" /><br />
+    <input type="password" name="proxy_pass" placeholder="Proxy Password" /><br />
+    <button type="submit">Login</button>
+  </form>
+</body>
+</html>
+
     <p id="error-msg" class="text-red-500 mt-4 hidden text-center">Login failed</p>
     <div id="farm-list" class="hidden mt-6">
       <h3 class="text-xl font-semibold mb-2">Farm Lists</h3>
