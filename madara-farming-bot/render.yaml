@@ -3,6 +3,5 @@ services:
     name: madara-bot
     env: python
     plan: free
-    buildCommand: ""  # leer lassen oder nur .render-build.sh
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port 10000
-    autoDeploy: true
