@@ -1,5 +1,7 @@
-from fastapi import FastAPI, Request, Query, Form
+from fastapi import FastAPI, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from bot.travian_bot import get_farm_lists
 import uvicorn
@@ -7,12 +9,22 @@ import threading
 
 app = FastAPI()
 
+# Middleware für CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 👉 Static Files mounten
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 👉 index.html bei Root-Route ausliefern
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
+
 
 @app.post("/login")
 async def login(request: Request):
@@ -31,57 +43,6 @@ async def login(request: Request):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-# Optionaler GET-Endpoint für Farm-Listen mit Query-Parametern
-@app.get("/farmlists")
-async def get_farmlist(username: str = Query(...)):
-    return {"message": f"Farm lists for {username} (dummy endpoint)"}
 
-    try:
-        farms = get_farm_lists(
-            username,
-            conf["password"],
-            conf["server_url"],
-            conf["proxy"]["ip"],
-            conf["proxy"]["port"],
-            conf["proxy"]["username"],
-            conf["proxy"]["password"]
-        )
-        return farms
-
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-
-@app.post("/start")
-async def start_bot(
-    username: str = Form(...),
-    min_interval: int = Form(...),
-    max_interval: int = Form(...),
-    randomize: bool = Form(...)
-):
-    if username not in user_sessions:
-        raise HTTPException(status_code=401, detail="Not logged in")
-
-    conf = user_sessions[username]
-
-    def run():
-        run_bot(
-            username,
-            conf["password"],
-            conf["server_url"],
-            min_interval,
-            max_interval,
-            randomize,
-            conf["proxy"]["ip"],
-            conf["proxy"]["port"],
-            conf["proxy"]["username"],
-            conf["proxy"]["password"]
-        )
-
-    thread = threading.Thread(target=run)
-    thread.start()
-
-    return {"message": "Bot started"}
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
