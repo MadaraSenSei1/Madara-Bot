@@ -1,6 +1,0 @@
-fastapi
-uvicorn
-selenium
-python-dotenv
-requests
-aiohttp
