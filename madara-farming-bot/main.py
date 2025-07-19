@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Form
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from travian_bot import login_and_save_session, get_farm_lists, start_farming_bot
+from bot.travian_bot import get_farm_lists, run_bot
 import uvicorn
 
 app = FastAPI()
