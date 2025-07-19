@@ -2,124 +2,822 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Travian Farming Bot</title>
-    <script defer>
-        let currentUser = "";
-
-        async function handleLogin() {
-            const username = document.getElementById("username").value.trim();
-            const password = document.getElementById("password").value.trim();
-            const server = document.getElementById("server").value.trim();
-            const proxy = document.getElementById("proxy").value.trim();
-
-            if (!username || !password || !server) {
-                alert("Please fill in all fields.");
-                return;
-            }
-
-            const form = new FormData();
-            form.append("username", username);
-            form.append("password", password);
-            form.append("server_url", server);
-            form.append("proxy_ip", proxy.split(":")[0] || "");
-            form.append("proxy_port", proxy.split(":")[1] || "");
-            form.append("proxy_user", "");
-            form.append("proxy_pass", "");
-
-            try {
-                const res = await fetch("/login", {
-                    method: "POST",
-                    body: form
-                });
-                const data = await res.json();
-
-                if (res.ok) {
-                    currentUser = username;
-                    document.getElementById("login-section").classList.add("hidden");
-                    document.getElementById("bot-section").classList.remove("hidden");
-                    loadFarmLists();
-                } else {
-                    alert("Login failed: " + (data?.error || "Unknown error"));
-                }
-            } catch (err) {
-                alert("Login error: " + err);
-            }
-        }
-
-        async function loadFarmLists() {
-            const listElement = document.getElementById("farm-list");
-            listElement.innerHTML = "<li>Loading...</li>";
-            try {
-                const res = await fetch(`/farmlist?username=${currentUser}`);
-                const data = await res.json();
-
-                if (res.ok) {
-                    listElement.innerHTML = "";
-                    data.farms.forEach(farm => {
-                        const li = document.createElement("li");
-                        li.textContent = farm;
-                        listElement.appendChild(li);
-                    });
-                } else {
-                    throw new Error(data.error);
-                }
-            } catch (err) {
-                listElement.innerHTML = `<li style="color:red;">Failed to load farm lists<br>${err.message}</li>`;
-            }
-        }
-
-        async function startBot() {
-            const min = document.getElementById("min-interval").value;
-            const max = document.getElementById("max-interval").value;
-
-            const form = new FormData();
-            form.append("username", currentUser);
-            form.append("interval_min", min);
-            form.append("interval_max", max);
-
-            try {
-                const res = await fetch("/start-bot", {
-                    method: "POST",
-                    body: form
-                });
-
-                const data = await res.json();
-                alert(res.ok ? "Bot started successfully" : "Error: " + data.error);
-            } catch (err) {
-                alert("Start error: " + err.message);
-            }
-        }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Madara Farming Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 20px;
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #1e40af;
+            --accent: #3b82f6;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --bg: #f9fafb;
         }
-        .hidden {
-            display: none;
+        
+        body {
+            background-color: var(--bg);
+        }
+        
+        .log-entry {
+            animation: fadeIn 0.3s ease-in-out;
+            border-left: 3px solid var(--primary);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .btn-start {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn-stop {
+            background: linear-gradient(135deg, var(--danger), #b91c1c);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn-start:hover {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            transform: translateY(-1px);
+        }
+        .btn-stop:hover {
+            background: linear-gradient(135deg, #b91c1c, var(--danger));
+            transform: translateY(-1px);
+        }
+        
+        /* Tab styling */
+        .tab-button {
+            transition: all 0.2s ease;
+        }
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-button:not(.active):hover {
+            color: var(--primary-dark);
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+        
+        /* Form inputs */
+        .form-input {
+            transition: all 0.2s ease;
+            border-color: var(--border);
+        }
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        /* Card styling */
+        .card {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex flex-col items-center">
+                <div class="flex items-center justify-center mb-4 bg-white p-4 rounded-xl shadow-sm w-full max-w-md">
+                    <i class="fas fa-swords text-4xl text-primary mr-3"></i>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">Travian Farming Bot</h1>
+                        <p class="text-gray-500 text-sm">Professional automation tool for Travian</p>
+                    </div>
+                </div>
+                <div class="w-full max-w-4xl bg-white p-4 rounded-xl shadow-sm">
+                    <p class="text-gray-600 text-center">Automate your farm raids with precision and efficiency</p>
+                </div>
+            </div>
+        </header>
 
-<div id="login-section">
-    <h2>Login</h2>
-    <input type="text" id="username" placeholder="Username"><br><br>
-    <input type="password" id="password" placeholder="Password"><br><br>
-    <input type="text" id="server" placeholder="https://ts9.x1.europe.travian.com"><br><br>
-    <input type="text" id="proxy" placeholder="Proxy (IP:PORT optional)"><br><br>
-    <button onclick="handleLogin()">Login</button>
-</div>
+        <!-- Main Content -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <!-- Tabs -->
+            <div class="flex border-b">
+                <button id="settings-tab" class="tab-button active px-6 py-3 font-medium border-b-2">Settings</button>
+                <button id="logs-tab" class="tab-button px-6 py-3 font-medium border-b-2 border-transparent">Activity Log</button>
+            </div>
 
-<div id="bot-section" class="hidden">
-    <h2>Raid Settings</h2>
-    <label>Minimum Interval (min): <input type="number" id="min-interval" value="10"></label><br><br>
-    <label>Maximum Interval (min): <input type="number" id="max-interval" value="15"></label><br><br>
-    <button onclick="startBot()">Start Bot</button>
+            <!-- Settings Panel -->
+            <div id="settings-panel" class="p-6">
+                <form id="bot-settings">
+                    <!-- Credentials Section -->
+                    <div id="credentials-section" class="mb-8">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-user-shield mr-2"></i> Account Credentials
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                <input type="text" id="username" class="form-input w-full px-4 py-2 border rounded-lg focus:ring-2" placeholder="Your Travian username">
+                            </div>
+                            <div>
+                                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Your Travian password">
+                            </div>
+                            <div>
+                                <label for="server" class="block text-sm font-medium text-gray-700 mb-1">Server</label>
+                                <select id="server" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="https://ts1.travian.com">TS1 (International)</option>
+                                    <option value="https://ts2.travian.com">TS2 (International)</option>
+                                    <option value="https://ts3.travian.com">TS3 (International)</option>
+                                    <option value="https://ts4.travian.com">TS4 (International)</option>
+                                    <option value="https://tx1.travian.com">TX1 (US)</option>
+                                    <option value="https://tx2.travian.com">TX2 (US)</option>
+                                    <option value="https://tx3.travian.com">TX3 (US)</option>
+                                    <option value="https://tx4.travian.com">TX4 (US)</option>
+                                    <option value="https://ts5.travian.com">TS5 (International)</option>
+                                    <option value="https://ts6.travian.com">TS6 (International)</option>
+                                    <option value="https://ts7.travian.com">TS7 (International)</option>
+                                    <option value="https://ts8.travian.com">TS8 (International)</option>
+                                    <option value="https://ts9.travian.com">TS9 (International)</option>
+                                    <option value="https://ts10.travian.com">TS10 (International)</option>
+                                    <option value="other">Other Server</option>
+                                </select>
+                            </div>
+                            <div id="custom-server-container" class="hidden">
+                                <label for="custom-server" class="block text-sm font-medium text-gray-700 mb-1">Custom Server URL</label>
+                                <input type="url" id="custom-server" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="https://your.server.com">
+                            </div>
+                            <div>
+                                <label for="proxy" class="block text-sm font-medium text-gray-700 mb-1">Proxy Server</label>
+                                <input type="text" id="proxy" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Proxy IP or hostname">
+                            </div>
+                            <div>
+                                <label for="proxy-port" class="block text-sm font-medium text-gray-700 mb-1">Proxy Port</label>
+                                <input type="number" id="proxy-port" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="8080">
+                            </div>
+                            <div>
+                                <label for="proxy-username" class="block text-sm font-medium text-gray-700 mb-1">Proxy Username</label>
+                                <input type="text" id="proxy-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Proxy username">
+                            </div>
+                            <div>
+                                <label for="proxy-password" class="block text-sm font-medium text-gray-700 mb-1">Proxy Password</label>
+                                <input type="password" id="proxy-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="Proxy password">
+                            </div>
+                        </div>
+                    </div>
 
-    <h2>Farm Lists <button onclick="loadFarmLists()">Refresh</button></h2>
-    <ul id="farm-list"></ul>
-</div>
+                    <!-- Account Info Section (hidden initially) -->
+                    <div class="mb-8 hidden" id="account-info-section">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-user-circle mr-2"></i> Account Information
+                        </h2>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Username</p>
+                                    <p id="account-username" class="font-medium">player123</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Server</p>
+                                    <p id="account-server" class="font-medium">https://ts1.travian.com</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Status</p>
+                                    <p id="account-status" class="font-medium text-green-600">Active</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Proxy</p>
+                                    <p id="account-proxy" class="font-medium">None</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <button onclick="logout()" class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-</body>
+                    <!-- Raid Settings Section (hidden initially) -->
+                    <div class="mb-8 hidden" id="raid-settings-section">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-clock mr-2"></i> Raid Settings
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="min-interval" class="block text-sm font-medium text-gray-700 mb-1">Minimum Interval (minutes)</label>
+                                <input type="number" id="min-interval" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" value="10" min="1">
+                            </div>
+                            <div>
+                                <label for="max-interval" class="block text-sm font-medium text-gray-700 mb-1">Maximum Interval (minutes)</label>
+                                <input type="number" id="max-interval" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" value="15" min="1">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="random-seconds" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                <label for="random-seconds" class="ml-2 block text-sm text-gray-700">Add random 0-30 seconds</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timer Display (hidden initially) -->
+                    <div class="mb-8 hidden" id="timer-display">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-clock mr-2"></i> Next Raid In
+                        </h2>
+                        <div class="text-center py-4 bg-gray-50 rounded-lg">
+                            <div id="countdown-timer" class="text-3xl font-bold text-green-600">00:00:00</div>
+                        </div>
+                    </div>
+
+                    <!-- Farm Lists Section (hidden initially) -->
+                    <div class="mb-8 hidden" id="farm-lists-section">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-list-check mr-2"></i> Farm Lists
+                        </h2>
+                        <div id="farm-lists" class="border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="p-4 bg-gray-50 border-b border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-gray-700">Available Farm Lists</span>
+                                    <button id="refresh-lists" class="text-sm text-green-600 hover:text-green-800 flex items-center">
+                                        <i class="fas fa-sync-alt mr-1"></i> Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="lists-container" class="p-4">
+                                <div class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Loading farm lists...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Control Button -->
+                    <div class="flex justify-center mt-8">
+                        <button id="bot-toggle" type="button" class="btn-start text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Logs Panel -->
+            <div id="logs-panel" class="p-6 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-scroll mr-2"></i> Activity Log
+                    </h2>
+                    <div class="flex gap-2">
+                        <button id="clear-logs" class="text-sm text-gray-600 hover:text-gray-800 flex items-center">
+                            <i class="fas fa-trash-alt mr-1"></i> Clear
+                        </button>
+                        <button id="export-logs" class="text-sm text-green-600 hover:text-green-800 flex items-center">
+                            <i class="fas fa-download mr-1"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div id="log-container" class="border border-gray-200 rounded-lg h-96 overflow-y-auto p-4 bg-gray-50">
+                    <div class="log-entry mb-3 p-3 bg-white rounded-lg shadow-sm">
+                        <div class="flex items-center text-sm">
+                            <span class="text-gray-500 mr-2">[System]</span>
+                            <span class="text-gray-700">Welcome to Madara Farming Bot</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">Just now</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="mt-6 bg-white rounded-xl shadow-sm p-4 flex items-center justify-between border border-gray-100">
+            <div class="flex items-center">
+                <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+                <span id="status-text" class="text-sm font-medium text-gray-600">Bot is idle</span>
+            </div>
+            <div class="text-sm text-gray-500">
+                <span id="last-action">Last action: Never</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-xl font-bold text-gray-800">Modal Title</h3>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="mb-4">
+                Modal content goes here
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="modal-cancel" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button id="modal-confirm" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check for existing login on load for Madara Farming Bot
+        window.onload = function() {
+            const savedUser = localStorage.getItem('travian_user');
+            if (savedUser) {
+                document.getElementById('username').value = savedUser;
+                const savedServer = localStorage.getItem('travian_server') || 'https://ts1.travian.com';
+                const serverSelect = document.getElementById('server');
+                
+                // Check if saved server is in our list
+                let found = false;
+                for (let i = 0; i < serverSelect.options.length; i++) {
+                    if (serverSelect.options[i].value === savedServer) {
+                        serverSelect.value = savedServer;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    serverSelect.value = 'other';
+                    document.getElementById('custom-server-container').classList.remove('hidden');
+                    document.getElementById('custom-server').value = savedServer;
+                }
+                
+                handleLogin();
+            }
+
+            // Handle custom server selection
+            document.getElementById('server').addEventListener('change', function() {
+                if (this.value === 'other') {
+                    document.getElementById('custom-server-container').classList.remove('hidden');
+                } else {
+                    document.getElementById('custom-server-container').classList.add('hidden');
+                }
+            });
+        };
+
+        // Global variables
+        let running = false;
+        let countdown = null;
+        window.loadFarmLists = loadFarmLists;
+        const accounts = [
+            {
+                username: "your_username",
+                password: "your_password",
+                server: "https://ts1.travian.com",
+                proxy: null
+            }
+        ];
+        const raidIntervalMin = 10;
+        const raidIntervalMax = 15;
+        
+        // Scheduler loop function
+        function schedulerLoop(minInterval, maxInterval) {
+            if (!running) return;
+            
+            // Clear any existing interval
+            if (countdown) {
+                clearInterval(countdown);
+            }
+            
+            // Calculate random wait time in minutes between min and max intervals
+            const waitMinutes = Math.floor(Math.random() * 
+                (maxInterval - minInterval + 1)) + parseInt(minInterval);
+            let remainingSeconds = waitMinutes * 60;
+            
+            // Add random seconds if enabled
+            if (document.getElementById('random-seconds').checked) {
+                const randomSeconds = Math.floor(Math.random() * 31); // 0-30 seconds
+                remainingSeconds += randomSeconds;
+            }
+            
+            // Update timer display initially
+            updateTimerDisplay(remainingSeconds);
+            
+            // Start countdown with callback for when timer reaches 0
+            countdown = setInterval(() => {
+                remainingSeconds--;
+                updateTimerDisplay(remainingSeconds);
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(countdown);
+                    addLogEntry('info', 'Completed raid cycle, starting new timer');
+                    
+                    // Start new cycle with new random time
+                    if (running) {
+                        schedulerLoop(minInterval, maxInterval);
+                    }
+                }
+            }, 1000);
+        }
+
+        // Timer display function
+        function updateTimerDisplay(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            document.getElementById('countdown-timer').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // DOM Elements
+        const settingsTab = document.getElementById('settings-tab');
+        const logsTab = document.getElementById('logs-tab');
+        const settingsPanel = document.getElementById('settings-panel');
+        const logsPanel = document.getElementById('logs-panel');
+        const botToggleBtn = document.getElementById('bot-toggle');
+        const refreshListsBtn = document.getElementById('refresh-lists');
+        const clearLogsBtn = document.getElementById('clear-logs');
+        const exportLogsBtn = document.getElementById('export-logs');
+        const logContainer = document.getElementById('log-container');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const lastAction = document.getElementById('last-action');
+        const modal = document.getElementById('modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalCancel = document.getElementById('modal-cancel');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+
+        // Tab switching
+        settingsTab.addEventListener('click', () => {
+            settingsTab.classList.add('text-green-600', 'border-green-600', 'bg-gray-50');
+            settingsTab.classList.remove('text-gray-500', 'hover:text-gray-700');
+            logsTab.classList.add('text-gray-500', 'hover:text-gray-700');
+            logsTab.classList.remove('text-green-600', 'border-green-600', 'bg-gray-50');
+            settingsPanel.classList.remove('hidden');
+            logsPanel.classList.add('hidden');
+        });
+
+        logsTab.addEventListener('click', () => {
+            logsTab.classList.add('text-green-600', 'border-green-600', 'bg-gray-50');
+            logsTab.classList.remove('text-gray-500', 'hover:text-gray-700');
+            settingsTab.classList.add('text-gray-500', 'hover:text-gray-700');
+            settingsTab.classList.remove('text-green-600', 'border-green-600', 'bg-gray-50');
+            logsPanel.classList.remove('hidden');
+            settingsPanel.classList.add('hidden');
+        });
+
+        // Modal functions
+        function showModal(title, content, confirmCallback = null) {
+            modalTitle.textContent = title;
+            modalContent.innerHTML = content;
+            modal.classList.remove('hidden');
+            
+            if (confirmCallback) {
+                modalConfirm.onclick = () => {
+                    confirmCallback();
+                    modal.classList.add('hidden');
+                };
+            } else {
+                modalConfirm.onclick = () => modal.classList.add('hidden');
+            }
+        }
+
+        closeModal.addEventListener('click', () => modal.classList.add('hidden'));
+        modalCancel.addEventListener('click', () => modal.classList.add('hidden'));
+
+        // Bot status
+        let botRunning = false;
+
+        // Function to load farm lists from Travian Legends
+        async function loadFarmLists() {
+            const listsContainer = document.getElementById('lists-container');
+            listsContainer.innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Loading farm lists from Travian Legends...</p>
+                </div>
+            `;
+
+            try {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const server = document.getElementById('server').value === 'other' 
+                    ? document.getElementById('custom-server').value 
+                    : document.getElementById('server').value;
+
+                // First authenticate with Travian
+                const authResponse = await fetch(`${server}/login.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `name=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+                    credentials: 'include'
+                });
+
+                if (!authResponse.ok) throw new Error('Login failed');
+
+                // Get farm lists from API
+                const response = await fetch(`${server}/ajax.php?cmd=getFarmLists`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch farm lists');
+
+                const farmLists = await response.json();
+
+                let html = '<div class="space-y-4">';
+                farmLists.forEach(list => {
+                    html += `
+                        <div class="border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="flex items-center justify-between p-3 bg-gray-50">
+                                <div class="flex items-center">
+                                    <i class="fas fa-list text-green-600 mr-3"></i>
+                                    <span class="font-medium">${list.name}</span>
+                                </div>
+                                <span class="text-sm text-gray-500">${list.farms.length} farms</span>
+                            </div>
+                            <div class="divide-y divide-gray-100">
+                                ${list.farms.map(farm => `
+                                    <div class="flex items-center justify-between p-3 hover:bg-gray-50">
+                                        <div>
+                                            <div class="font-medium">${farm.name}</div>
+                                            <div class="text-xs text-gray-500">${farm.coordinates}</div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" ${farm.active ? 'checked' : ''} data-farm-id="${farm.id}">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                        </label>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+
+                listsContainer.innerHTML = html;
+                addLogEntry('success', 'Farm lists loaded successfully');
+                
+                // Add event listeners to farm toggle switches
+                document.querySelectorAll('#lists-container input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const farmId = this.getAttribute('data-farm-id');
+                        const isActive = this.checked;
+                        addLogEntry('info', `Farm ${farmId} ${isActive ? 'activated' : 'deactivated'}`);
+                        // In real implementation, save this preference
+                    });
+                });
+
+            } catch (error) {
+                listsContainer.innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>Failed to load farm lists</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                        <button onclick="loadFarmLists()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            <i class="fas fa-sync-alt mr-2"></i> Try Again
+                        </button>
+                    </div>
+                `;
+                addLogEntry('error', 'Failed to load farm lists from Travian Legends: ' + error.message);
+                
+                // If auth failed, log out the user
+                if (error.message.includes('Login failed')) {
+                    logout();
+                }
+            }
+        }
+
+        // Log functions
+        function addLogEntry(type, message) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString();
+            
+            let icon, color;
+            switch(type) {
+                case 'success':
+                    icon = 'check-circle';
+                    color = 'text-green-500';
+                    break;
+                case 'error':
+                    icon = 'exclamation-circle';
+                    color = 'text-red-500';
+                    break;
+                case 'warning':
+                    icon = 'exclamation-triangle';
+                    color = 'text-yellow-500';
+                    break;
+                case 'info':
+                    icon = 'info-circle';
+                    color = 'text-blue-500';
+                    break;
+                default:
+                    icon = 'info-circle';
+                    color = 'text-gray-500';
+            }
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry mb-3 p-3 bg-white rounded-lg shadow-sm';
+            logEntry.innerHTML = `
+                <div class="flex items-center text-sm">
+                    <i class="fas fa-${icon} ${color} mr-2"></i>
+                    <span class="text-gray-700">${message}</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">${timeString} ${dateString}</div>
+            `;
+            
+            logContainer.prepend(logEntry);
+            lastAction.textContent = `Last action: ${timeString}`;
+        }
+
+        // Clear logs
+        clearLogsBtn.addEventListener('click', () => {
+            showModal('Clear Logs', 'Are you sure you want to clear all activity logs?', () => {
+                logContainer.innerHTML = '';
+                addLogEntry('info', 'Logs cleared');
+            });
+        });
+
+        // Export logs
+        exportLogsBtn.addEventListener('click', () => {
+            showModal('Export Logs', 'Exporting logs will download a text file with all activity records.', () => {
+                addLogEntry('success', 'Logs exported successfully');
+                // In a real app, this would actually export the logs
+            });
+        });
+
+        // Refresh farm lists
+        refreshListsBtn.addEventListener('click', function() {
+            loadFarmLists();
+            addLogEntry('info', 'Refreshing farm lists...');
+        });
+
+        // Logout function
+        function logout() {
+            running = false;
+            botRunning = false;
+            localStorage.clear();
+            
+            // Reset UI
+            document.getElementById('credentials-section').classList.remove('hidden');
+            document.getElementById('account-info-section').classList.add('hidden');
+            document.getElementById('raid-settings-section').classList.add('hidden');
+            document.getElementById('farm-lists-section').classList.add('hidden');
+            document.getElementById('timer-display').classList.add('hidden');
+            
+            statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-400 mr-2';
+            statusText.textContent = 'Bot is idle';
+            statusText.className = 'text-sm font-medium text-gray-600';
+            botToggleBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Login';
+            botToggleBtn.className = 'btn-start text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center';
+            
+            addLogEntry('info', 'Logged out successfully');
+        }
+
+        // Login function
+        function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            let server = document.getElementById('server').value.trim();
+            if (server === 'other') {
+                server = document.getElementById('custom-server').value.trim();
+            }
+            const proxy = document.getElementById('proxy').value.trim();
+            
+            if (!username || !password || !server) {
+                addLogEntry('error', 'All fields are required');
+                return false;
+            }
+            
+            localStorage.setItem('travian_user', username);
+            localStorage.setItem('travian_server', server);
+            
+            // Update account info
+            accounts[0].username = username;
+            accounts[0].password = password;
+            accounts[0].server = server;
+            accounts[0].proxy = proxy;
+            
+            // In a real app, you would verify credentials here
+            // For demo, we'll just show success if fields are filled
+            
+            // Hide credentials and show other sections
+            document.getElementById('credentials-section').classList.add('hidden');
+            document.getElementById('account-info-section').classList.remove('hidden');
+            document.getElementById('raid-settings-section').classList.remove('hidden');
+            document.getElementById('farm-lists-section').classList.remove('hidden');
+            document.getElementById('timer-display').classList.add('hidden');
+            
+            // Load farm lists immediately after login
+            loadFarmLists();
+            
+            // Initialize farm lists container
+            const listsContainer = document.getElementById('lists-container');
+            listsContainer.innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Loading farm lists from Travian Legends...</p>
+                </div>
+            `;
+
+            // Update account info display
+            document.getElementById('account-username').textContent = username;
+            document.getElementById('account-server').textContent = server;
+            document.getElementById('account-proxy').textContent = 
+                document.getElementById('proxy').value || 'None';
+            
+            // Change start button to say "Start Bot" now
+            botToggleBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Start Bot';
+            botToggleBtn.className = 'btn-start text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center';
+            
+            // Show farm lists tab by default after login
+            settingsTab.click();
+            
+            addLogEntry('success', 'Logged in successfully');
+            
+            return true;
+        }
+
+        // Bot toggle handler
+        botToggleBtn.addEventListener('click', () => {
+            // First check if we need to login
+            if (document.getElementById('raid-settings-section').classList.contains('hidden')) {
+                if (!handleLogin()) return;
+                // Don't return here - let it continue to start the bot
+                botToggleBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Start Bot';
+                botToggleBtn.className = 'btn-start text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center';
+                return;
+            }
+            
+            if (!botRunning) {
+                // Start bot logic
+                const minInterval = document.getElementById('min-interval').value || raidIntervalMin;
+                const maxInterval = document.getElementById('max-interval').value || raidIntervalMax;
+                
+                if (parseInt(minInterval) <= 0 || parseInt(maxInterval) < parseInt(minInterval)) {
+                    addLogEntry('error', 'Invalid interval values');
+                    showModal('Error', 'Please ensure minimum interval is greater than 0 and maximum interval is greater than or equal to minimum interval');
+                    return;
+                }
+                
+                botRunning = true;
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500 mr-2 animate-pulse';
+                statusText.textContent = 'Bot is running';
+                statusText.className = 'text-sm font-medium text-green-600';
+                botToggleBtn.innerHTML = '<i class="fas fa-stop mr-2"></i> Stop Bot';
+                botToggleBtn.className = 'btn-stop text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center';
+                
+                // Hide settings and show timer
+                document.getElementById('raid-settings-section').classList.add('hidden');
+                document.getElementById('timer-display').classList.remove('hidden');
+                
+                // Calculate random interval between min and max (in minutes)
+                const intervalMinutes = Math.floor(Math.random() * (maxInterval - minInterval + 1)) + parseInt(minInterval);
+                let remainingSeconds = intervalMinutes * 60;
+                
+                // Add random seconds if enabled
+                if (document.getElementById('random-seconds').checked) {
+                    const randomSeconds = Math.floor(Math.random() * 31); // 0-30 seconds
+                    remainingSeconds += randomSeconds;
+                }
+                
+                // Update timer display initially
+                updateTimerDisplay(remainingSeconds);
+                
+                // Start scheduler
+                running = true;
+                schedulerLoop(minInterval, maxInterval);
+                
+                addLogEntry('success', `Bot started with intervals ${minInterval}-${maxInterval} minutes`);
+            } else {
+                // Stop bot logic
+                running = false;
+                botRunning = false;
+                
+                // Clear any running intervals
+                if (countdown) {
+                    clearInterval(countdown);
+                    countdown = null;
+                    document.getElementById('countdown-timer').textContent = '00:00:00';
+                }
+                
+                // Reset UI
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-400 mr-2';
+                statusText.textContent = 'Bot is idle';
+                statusText.className = 'text-sm font-medium text-gray-600';
+                botToggleBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Start Bot';
+                botToggleBtn.className = 'btn-start text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center';
+                
+                // Reset timer display
+                document.getElementById('countdown-timer').textContent = '00:00:00';
+                
+                // Show settings sections
+                document.getElementById('raid-settings-section').classList.remove('hidden');
+                document.getElementById('timer-display').classList.add('hidden');
+                
+                addLogEntry('info', 'Bot stopped successfully');
+            }
+        });
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=Madara233/madara-farming-bot" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
 </html>
