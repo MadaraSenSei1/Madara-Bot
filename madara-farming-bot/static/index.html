@@ -2,187 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Travian Farming Bot</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 0;
-    }
-
-    .navbar {
-      background: #333;
-      color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 20px;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #aaa;
-    }
-
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 12px;
-      font-size: 16px;
-    }
-
-    .flex {
-      display: flex;
-      gap: 10px;
-    }
-
-    .farm-list {
-      background: #f9f9f9;
-      border: 1px solid #ddd;
-      padding: 10px;
-      max-height: 200px;
-      overflow-y: auto;
-      margin-bottom: 15px;
-    }
-
-    .timer {
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 10px;
-      color: green;
-    }
-  </style>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-  <div class="navbar">Travian Farming Bot</div>
-
+<body class="p-4">
   <div class="container">
-    <div id="loginForm">
-      <h2>Login</h2>
-      <input type="text" id="username" placeholder="Travian Username" />
-      <input type="password" id="password" placeholder="Travian Password" />
-      <input type="text" id="server_url" placeholder="Server URL (e.g. https://ts1.travian.com)" />
-      <h3>Proxy Settings (optional)</h3>
-      <input type="text" id="proxy_ip" placeholder="Proxy IP" />
-      <input type="text" id="proxy_port" placeholder="Proxy Port" />
-      <input type="text" id="proxy_user" placeholder="Proxy Username" />
-      <input type="password" id="proxy_pass" placeholder="Proxy Password" />
-      <button onclick="login()">Login</button>
+    <h1 class="mb-4">Farm Bot Dashboard</h1>
+
+    <!-- LOGIN FORM -->
+    <div id="login-section">
+      <form id="login-form">
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Server URL</label>
+          <input type="url" class="form-control" id="server_url" name="server_url"
+                 placeholder="https://ts9.x1.europe.travian.com" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Proxy IP</label>
+          <input type="text" class="form-control" id="proxy_ip" name="proxy_ip">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Proxy Port</label>
+          <input type="text" class="form-control" id="proxy_port" name="proxy_port">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Proxy Username</label>
+          <input type="text" class="form-control" id="proxy_user" name="proxy_user">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Proxy Password</label>
+          <input type="password" class="form-control" id="proxy_pass" name="proxy_pass">
+        </div>
+        <button class="btn btn-primary" type="submit">Login</button>
+      </form>
     </div>
 
-    <div id="dashboard" style="display: none;">
-      <div class="flex">
-        <input type="number" id="interval_min" placeholder="Min interval (min)" />
-        <input type="number" id="interval_max" placeholder="Max interval (min)" />
-      </div>
-      <button onclick="startBot()">Start Bot</button>
-      <button onclick="stopBot()">Stop Bot</button>
-      <div class="timer" id="countdownTimer"></div>
-      <button onclick="refreshFarmLists()">Refresh Farm Lists</button>
+    <!-- DASHBOARD -->
+    <div id="dashboard" style="display:none;">
+      <p>Logged in as: <strong id="display-username"></strong></p>
 
-      <h3>Farm Lists</h3>
-      <div class="farm-list" id="farmList"></div>
+      <div class="mb-3">
+        <label class="form-label">Minimum Interval (minutes)</label>
+        <input type="number" class="form-control" id="min-interval" value="10" min="1">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Maximum Interval (minutes)</label>
+        <input type="number" class="form-control" id="max-interval" value="15" min="1">
+      </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="random-seconds">
+        <label class="form-check-label">Random Delay: 0–30 seconds</label>
+      </div>
+
+      <button class="btn btn-success mb-2" id="start-bot-btn">▶ Start Bot</button>
+      <button class="btn btn-secondary mb-2" id="refresh-btn">🔄 Refresh Farm Lists</button>
+
+      <h3>Available Farm Lists</h3>
+      <ul id="farm-lists-container" class="list-group"></ul>
     </div>
   </div>
 
   <script>
-    let countdownInterval;
+    // Login handler
+    document.getElementById("login-form").onsubmit = async e => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const res = await fetch("/login", { method: "POST", body: form });
+      const json = await res.json();
+      if (res.ok) {
+        const user = form.get("username");
+        document.getElementById("display-username").textContent = user;
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        loadFarmLists();
+      } else {
+        alert("Login failed: " + json.error);
+      }
+    };
 
-    function login() {
-      const data = {
-        username: document.getElementById('username').value,
-        password: document.getElementById('password').value,
-        server_url: document.getElementById('server_url').value,
-        proxy: {
-          ip: document.getElementById('proxy_ip').value,
-          port: document.getElementById('proxy_port').value,
-          username: document.getElementById('proxy_user').value,
-          password: document.getElementById('proxy_pass').value
-        }
-      };
-
-      fetch('/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('loginForm').style.display = 'none';
-          document.getElementById('dashboard').style.display = 'block';
-          showFarmLists(data.farms);
-        } else {
-          alert('Login failed: ' + data.error);
-        }
-      });
+    // Load farm lists
+    async function loadFarmLists() {
+      const user = document.getElementById("username").value;
+      const res = await fetch(`/farmlist?username=${encodeURIComponent(user)}`);
+      const json = await res.json();
+      const container = document.getElementById("farm-lists-container");
+      container.innerHTML = "";
+      if (res.ok) {
+        json.farms.forEach(f => {
+          const li = document.createElement("li");
+          li.className = "list-group-item";
+          li.textContent = f;
+          container.appendChild(li);
+        });
+      } else {
+        const li = document.createElement("li");
+        li.className = "list-group-item text-danger";
+        li.textContent = "Error: " + json.error;
+        container.appendChild(li);
+      }
     }
 
-    function showFarmLists(farms) {
-      const list = document.getElementById('farmList');
-      list.innerHTML = '';
-      farms.forEach(farm => {
-        const div = document.createElement('div');
-        div.textContent = farm;
-        list.appendChild(div);
-      });
-    }
+    // Refresh button
+    document.getElementById("refresh-btn").onclick = loadFarmLists;
 
-    function startBot() {
-      const min = parseInt(document.getElementById('interval_min').value);
-      const max = parseInt(document.getElementById('interval_max').value);
-      if (isNaN(min) || isNaN(max)) return alert("Set valid min/max!");
-
-      fetch('/start-bot', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ interval_min: min, interval_max: max })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.next_delay_seconds) {
-          startCountdown(data.next_delay_seconds);
-        } else {
-          alert("Failed to start bot.");
-        }
-      });
-    }
-
-    function stopBot() {
-      clearInterval(countdownInterval);
-      document.getElementById('countdownTimer').textContent = '';
-    }
-
-    function startCountdown(seconds) {
-      const timer = document.getElementById('countdownTimer');
-      clearInterval(countdownInterval);
-
-      countdownInterval = setInterval(() => {
-        if (seconds <= 0) {
-          clearInterval(countdownInterval);
-          timer.textContent = 'Waiting for next run...';
-          return;
-        }
-        timer.textContent = `Next raid in ${seconds--} sec`;
-      }, 1000);
-    }
-
-    function refreshFarmLists() {
-      fetch('/get-farms')
-      .then(res => res.json())
-      .then(data => {
-        if (data.farms) {
-          showFarmLists(data.farms);
-        } else {
-          alert("Failed to fetch farm lists.");
-        }
-      });
-    }
+    // Start Bot handler
+    document.getElementById("start-bot-btn").onclick = async () => {
+      const form = new FormData();
+      form.set("username", document.getElementById("username").value);
+      form.set("interval_min", document.getElementById("min-interval").value);
+      form.set("interval_max", document.getElementById("max-interval").value);
+      form.set("random_delay", document.getElementById("random-seconds").checked);
+      const res = await fetch("/start-bot", { method: "POST", body: form });
+      const json = await res.json();
+      if (res.ok) {
+        alert("Bot started");
+      } else {
+        alert("Error: " + json.error);
+      }
+    };
   </script>
 </body>
 </html>
