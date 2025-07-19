@@ -1,121 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Travian Farming Bot</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travian Farming Bot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
-    <div class="max-w-3xl mx-auto mt-10 p-6 bg-white rounded shadow">
-        <h1 class="text-3xl font-bold mb-4 text-center">Travian Farming Bot</h1>
+  <div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded shadow">
+    <h1 class="text-3xl font-bold text-center mb-6">Travian Farming Bot</h1>
 
-        <div id="login-section">
-            <form id="login-form" class="space-y-4">
-                <input id="username" type="text" placeholder="Username" class="w-full border p-2 rounded" required />
-                <input id="password" type="password" placeholder="Password" class="w-full border p-2 rounded" required />
-                <input id="server" type="text" placeholder="https://ts9.x1.europe.travian.com" class="w-full border p-2 rounded" required />
-                <input id="proxy" type="text" placeholder="Optional Proxy (IP:Port)" class="w-full border p-2 rounded" />
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
-            </form>
+    <!-- Login Form -->
+    <form id="login-form" class="space-y-4">
+      <div>
+        <label class="block font-semibold">Username</label>
+        <input type="text" id="username" class="w-full border p-2 rounded" required />
+      </div>
+      <div>
+        <label class="block font-semibold">Password</label>
+        <input type="password" id="password" class="w-full border p-2 rounded" required />
+      </div>
+      <div>
+        <label class="block font-semibold">Server URL (e.g. https://ts1.travian.com)</label>
+        <input type="text" id="server" class="w-full border p-2 rounded" required />
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block font-semibold">Proxy IP</label>
+          <input type="text" id="proxy_ip" class="w-full border p-2 rounded" />
         </div>
-
-        <div id="main-section" class="hidden mt-6">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <strong>Username:</strong> <span id="display-username"></span><br />
-                    <strong>Server:</strong> <span id="display-server"></span>
-                </div>
-                <button id="logout-btn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
-            </div>
-
-            <h2 class="text-xl font-semibold mb-2">Farm Lists</h2>
-            <div class="flex justify-between items-center mb-2">
-                <span>Available Farm Lists:</span>
-                <button id="refresh-farms" class="text-green-600 hover:underline">🔄 Refresh</button>
-            </div>
-            <ul id="farm-list" class="list-disc ml-5 text-gray-700"></ul>
-            <div id="farm-error" class="text-red-500 mt-2 hidden">⚠️ Failed to load farm lists</div>
+        <div>
+          <label class="block font-semibold">Proxy Port</label>
+          <input type="text" id="proxy_port" class="w-full border p-2 rounded" />
         </div>
+        <div>
+          <label class="block font-semibold">Proxy Username</label>
+          <input type="text" id="proxy_user" class="w-full border p-2 rounded" />
+        </div>
+        <div>
+          <label class="block font-semibold">Proxy Password</label>
+          <input type="password" id="proxy_pass" class="w-full border p-2 rounded" />
+        </div>
+      </div>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">
+        Login
+      </button>
+    </form>
+
+    <div id="bot-panel" class="hidden mt-10 space-y-6">
+      <!-- Farm Lists -->
+      <div class="border p-4 rounded">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Farm Lists</h2>
+          <button id="refresh-button" class="text-blue-600 underline">Refresh</button>
+        </div>
+        <ul id="farm-list" class="list-disc pl-5 mt-4 text-gray-800">
+          <!-- Filled dynamically -->
+        </ul>
+        <div id="farm-list-error" class="text-red-500 hidden mt-2">Failed to load farm lists</div>
+      </div>
+
+      <!-- Raid Settings -->
+      <div class="border p-4 rounded">
+        <h2 class="text-xl font-semibold mb-2">Raid Settings</h2>
+        <label>Min Interval (min): <input id="interval_min" type="number" value="10" class="border p-1 rounded w-20 ml-2" /></label>
+        <label class="ml-4">Max Interval (min): <input id="interval_max" type="number" value="15" class="border p-1 rounded w-20 ml-2" /></label>
+      </div>
+
+      <!-- Start Bot Button -->
+      <div class="text-center">
+        <button id="start-bot" class="bg-green-600 text-white px-6 py-2 rounded">Start Bot</button>
+      </div>
     </div>
+  </div>
 
-    <script>
-        let currentUser = "";
+  <script>
+    const form = document.getElementById("login-form");
+    const farmListEl = document.getElementById("farm-list");
+    const farmListError = document.getElementById("farm-list-error");
+    const botPanel = document.getElementById("bot-panel");
 
-        document.getElementById("login-form").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const username = document.getElementById("username").value.trim();
-            const password = document.getElementById("password").value.trim();
-            const server = document.getElementById("server").value.trim();
-            const proxy = document.getElementById("proxy").value.trim();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = new URLSearchParams();
+      data.append("username", document.getElementById("username").value);
+      data.append("password", document.getElementById("password").value);
+      data.append("server_url", document.getElementById("server").value);
+      data.append("proxy_ip", document.getElementById("proxy_ip").value);
+      data.append("proxy_port", document.getElementById("proxy_port").value);
+      data.append("proxy_user", document.getElementById("proxy_user").value);
+      data.append("proxy_pass", document.getElementById("proxy_pass").value);
 
-            const [proxy_ip, proxy_port] = proxy.includes(":") ? proxy.split(":") : ["", ""];
+      const res = await fetch("/login", {
+        method: "POST",
+        body: data,
+      });
 
-            const formData = new FormData();
-            formData.append("username", username);
-            formData.append("password", password);
-            formData.append("server_url", server);
-            formData.append("proxy_ip", proxy_ip);
-            formData.append("proxy_port", proxy_port);
-            formData.append("proxy_user", "");
-            formData.append("proxy_pass", "");
+      const result = await res.json();
+      if (res.ok) {
+        botPanel.classList.remove("hidden");
+        loadFarmLists();
+      } else {
+        alert("Login failed");
+      }
+    });
 
-            try {
-                const res = await fetch("/login", {
-                    method: "POST",
-                    body: formData
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    currentUser = username;
-                    document.getElementById("login-section").classList.add("hidden");
-                    document.getElementById("main-section").classList.remove("hidden");
-                    document.getElementById("display-username").textContent = username;
-                    document.getElementById("display-server").textContent = server;
-                    loadFarmLists();
-                } else {
-                    alert("Login failed: " + data.error);
-                }
-            } catch (err) {
-                alert("Error connecting to server.");
-            }
-        });
+    async function loadFarmLists() {
+      const username = document.getElementById("username").value;
+      try {
+        const res = await fetch(`/farmlist?username=${username}`);
+        const result = await res.json();
 
-        document.getElementById("refresh-farms").addEventListener("click", async () => {
-            loadFarmLists();
-        });
+        farmListEl.innerHTML = "";
+        farmListError.classList.add("hidden");
 
-        document.getElementById("logout-btn").addEventListener("click", () => {
-            currentUser = "";
-            document.getElementById("main-section").classList.add("hidden");
-            document.getElementById("login-section").classList.remove("hidden");
-            document.getElementById("farm-list").innerHTML = "";
-        });
-
-        async function loadFarmLists() {
-            const list = document.getElementById("farm-list");
-            const errorMsg = document.getElementById("farm-error");
-            list.innerHTML = "";
-            errorMsg.classList.add("hidden");
-
-            try {
-                const res = await fetch(`/farmlist?username=${encodeURIComponent(currentUser)}`);
-                const data = await res.json();
-                if (res.ok && Array.isArray(data.farms)) {
-                    data.farms.forEach(farm => {
-                        const li = document.createElement("li");
-                        li.textContent = farm;
-                        list.appendChild(li);
-                    });
-                } else {
-                    errorMsg.textContent = "⚠️ Keine Farm-Listen gefunden";
-                    errorMsg.classList.remove("hidden");
-                }
-            } catch (err) {
-                errorMsg.textContent = "⚠️ Fehler beim Laden der Farm-Listen";
-                errorMsg.classList.remove("hidden");
-            }
+        if (result.farms && result.farms.length > 0) {
+          result.farms.forEach(farm => {
+            const li = document.createElement("li");
+            li.textContent = farm;
+            farmListEl.appendChild(li);
+          });
+        } else {
+          farmListEl.innerHTML = "<li>No farm lists found</li>";
         }
-    </script>
+      } catch (err) {
+        farmListError.classList.remove("hidden");
+      }
+    }
+
+    document.getElementById("refresh-button").addEventListener("click", loadFarmLists);
+
+    document.getElementById("start-bot").addEventListener("click", async () => {
+      const username = document.getElementById("username").value;
+      const min = document.getElementById("interval_min").value;
+      const max = document.getElementById("interval_max").value;
+
+      const data = new URLSearchParams();
+      data.append("username", username);
+      data.append("interval_min", min);
+      data.append("interval_max", max);
+
+      await fetch("/start-bot", {
+        method: "POST",
+        body: data,
+      });
+
+      alert("Bot started!");
+    });
+  </script>
 </body>
 </html>
