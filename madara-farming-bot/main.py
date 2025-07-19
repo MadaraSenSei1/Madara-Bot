@@ -45,3 +45,7 @@ async def start_bot(username: str = Form(...), interval_min: int = Form(...), in
 
     run_bot(username, password, proxy, interval_min, interval_max)
     return JSONResponse({"message": "Bot gestartet"})
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
