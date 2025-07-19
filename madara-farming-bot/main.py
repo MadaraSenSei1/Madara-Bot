@@ -73,3 +73,8 @@ async def start_bot(
         session["server_url"]
     )
     return JSONResponse({"message": "Bot gestartet"})
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
+
