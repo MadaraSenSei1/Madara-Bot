@@ -5,25 +5,30 @@ from bot.travian_bot import get_farm_lists, run_bot
 import threading
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
-user_sessions = {}
-
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    return FileResponse("static/index.html")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/login")
-async def login(
-    username: str = Form(...),
-    password: str = Form(...),
-    server_url: str = Form(...),
-    proxy_ip: str = Form(""),
-    proxy_port: str = Form(""),
-    proxy_user: str = Form(""),
-    proxy_pass: str = Form(""),
-):
+async def login(request: Request):
+    data = await request.json()
+    try:
+        farm_lists = get_farm_lists(
+            username=data["username"],
+            password=data["password"],
+            server_url=data["server_url"],
+            proxy_ip=data["proxy_ip"],
+            proxy_port=data["proxy_port"],
+            proxy_user=data["proxy_user"],
+            proxy_pass=data["proxy_pass"]
+        )
+        return {"success": True, "farmLists": farm_lists}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
     try:
         # Attempt to login using TravianBot
         farm_lists = get_farm_lists(username, password, server_url, proxy_ip, proxy_port, proxy_user, proxy_pass)
