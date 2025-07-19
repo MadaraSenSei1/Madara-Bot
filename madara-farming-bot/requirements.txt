@@ -1,5 +1,8 @@
-flask
-selenium
-chromedriver-autoinstaller
 fastapi
-python-multipart
+uvicorn
+selenium
+python-dotenv
+requests
+pydantic
+websockets
+typing_extensions
