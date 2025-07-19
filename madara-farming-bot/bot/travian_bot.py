@@ -15,10 +15,9 @@ def get_farm_lists(username, password, server_url, proxy_ip="", proxy_port="", p
 
     if proxy_ip and proxy_port:
     if proxy_user and proxy_pass:
-        proxy_auth = f"{proxy_user}:{proxy_pass}@{proxy_ip}:{proxy_port}"
-        chrome_options.add_argument(f"--proxy-server=http://{proxy_auth}")
+        chrome_options.add_argument(f'--proxy-server=http://{proxy_user}:{proxy_pass}@{proxy_ip}:{proxy_port}')
     else:
-        chrome_options.add_argument(f"--proxy-server=http://{proxy_ip}:{proxy_port}")
+        chrome_options.add_argument(f'--proxy-server=http://{proxy_ip}:{proxy_port}')
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
