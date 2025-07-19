@@ -1,7 +1,7 @@
 services:
   - type: web
-    name: madara-farming-bot
+    name: madara-bot
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
     plan: free
