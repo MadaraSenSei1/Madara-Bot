@@ -1,16 +1,14 @@
+# main.py
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-
-# <-- hier die korrigierten Importe:
-from bot.travian_bot import get_farm_lists, run_bot
+from bot.travian_bot import login_and_save_session, get_farm_lists, run_farming_bot
+import threading
 
 app = FastAPI()
-
-# statische Dateien (HTML/CSS/JS) ausliefern
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Session‑Store
+# In‑memory session store
 user_sessions = {}
 
 @app.get("/", response_class=HTMLResponse)
@@ -25,8 +23,15 @@ async def login(
     proxy_ip: str = Form(""),
     proxy_port: str = Form(""),
     proxy_user: str = Form(""),
-    proxy_pass: str = Form(""),
+    proxy_pass: str = Form("")
 ):
+    # (Optional) perform a test login here or just store credentials
+    login_and_save_session(username, password, server_url, {
+        "ip": proxy_ip,
+        "port": proxy_port,
+        "username": proxy_user,
+        "password": proxy_pass
+    })
     user_sessions[username] = {
         "password": password,
         "server_url": server_url,
@@ -37,18 +42,19 @@ async def login(
             "password": proxy_pass
         }
     }
-    return JSONResponse({"message": "Login saved"})
+    return JSONResponse({"message": "Login successful"})
 
 @app.get("/farmlist")
-async def get_farmlist(username: str):
+async def farmlist(username: str):
     if username not in user_sessions:
         return JSONResponse({"error": "Not logged in"}, status_code=403)
     sess = user_sessions[username]
+    # Blocking call – in production wrap in to_thread
     farms = get_farm_lists(
         username,
         sess["password"],
-        sess["proxy"],
-        sess["server_url"]
+        sess["server_url"],
+        sess["proxy"]
     )
     return JSONResponse({"farms": farms})
 
@@ -57,18 +63,26 @@ async def start_bot(
     username: str = Form(...),
     interval_min: int = Form(...),
     interval_max: int = Form(...),
+    random_delay: bool = Form(False)
 ):
     if username not in user_sessions:
         return JSONResponse({"error": "Not logged in"}, status_code=403)
     sess = user_sessions[username]
-    run_bot(
-        username,
-        sess["password"],
-        sess["proxy"],
-        interval_min,
-        interval_max,
-        sess["server_url"]
+    # Launch bot in background thread
+    thread = threading.Thread(
+        target=run_farming_bot,
+        args=(
+            username,
+            sess["password"],
+            sess["server_url"],
+            sess["proxy"],
+            interval_min,
+            interval_max,
+            random_delay
+        ),
+        daemon=True
     )
+    thread.start()
     return JSONResponse({"message": "Bot started"})
 
 if __name__ == "__main__":
