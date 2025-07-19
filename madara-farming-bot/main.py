@@ -19,33 +19,32 @@ async def login(
     username: str = Form(...),
     password: str = Form(...),
     server_url: str = Form(...),
-    proxy_ip: str = Form(""),
-    proxy_port: str = Form(""),
-    proxy_user: str = Form(""),
-    proxy_pass: str = Form("")
+    proxy_ip:    str = Form(""),
+    proxy_port:  str = Form(""),
+    proxy_user:  str = Form(""),
+    proxy_pass:  str = Form(""),
 ):
     user_sessions[username] = {
-        "password": password,
-        "server_url": server_url.rstrip("/"),
+        "password":   password,
+        "server_url": server_url,
         "proxy": {
-            "ip": proxy_ip,
-            "port": proxy_port,
+            "ip":       proxy_ip,
+            "port":     proxy_port,
             "username": proxy_user,
-            "password": proxy_pass
+            "password": proxy_pass,
         }
     }
-    return JSONResponse({"message": "Login successful"})
+    return JSONResponse({"message":"ok"})
 
 @app.get("/farmlist")
-async def farmlist(username: str):
+async def get_farmlist(username: str):
     if username not in user_sessions:
-        return JSONResponse({"error": "Not logged in"}, status_code=403)
-    sess = user_sessions[username]
+        return JSONResponse({"error":"not logged in"}, status_code=403)
     farms = get_farm_lists(
-        username,
-        sess["password"],
-        sess["server_url"],
-        sess["proxy"]
+      username,
+      user_sessions[username]["password"],
+      user_sessions[username]["proxy"],
+      user_sessions[username]["server_url"],
     )
     return JSONResponse({"farms": farms})
 
