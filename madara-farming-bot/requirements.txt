@@ -2,9 +2,5 @@ fastapi
 uvicorn
 selenium
 python-multipart
-pyppeteer
-pydantic
 requests
-webdriver-manager
-httpx
 python-dotenv
