@@ -1,38 +1,67 @@
+# bot/travian_bot.py
+import os, time, random
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-import time
-import random
+from selenium.webdriver.common.by import By
 
-def run_bot(username, password, proxy, interval_min, interval_max):
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
+# Env‑Variablen für Chrome/Chromedriver
+CHROME_BIN = os.getenv("GOOGLE_CHROME_SHIM", "/usr/bin/google-chrome")
+CHROMEDRIVER = os.getenv("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
 
-    # Proxy einfügen, falls vorhanden
-    if proxy and proxy["ip"] and proxy["port"]:
-        proxy_string = f'{proxy["ip"]}:{proxy["port"]}'
-        chrome_options.add_argument(f'--proxy-server=http://{proxy_string}')
+def _make_driver(proxy_ip=None, proxy_port=None, proxy_user=None, proxy_pass=None):
+    opts = Options()
+    opts.headless = True
+    opts.binary_location = CHROME_BIN
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    if proxy_ip and proxy_port:
+        auth = ""
+        if proxy_user and proxy_pass:
+            auth = f"{proxy_user}:{proxy_pass}@"
+        opts.add_argument(f"--proxy-server=http://{auth}{proxy_ip}:{proxy_port}")
+    driver = webdriver.Chrome(executable_path=CHROMEDRIVER, options=opts)
+    return driver
 
-    driver = webdriver.Chrome(options=chrome_options)
+def login_and_fetch_farms(username, password, server_url,
+                          proxy_ip=None, proxy_port=None,
+                          proxy_user=None, proxy_pass=None):
+    """
+    Loggt sich ein und liefert eine Liste aller Farm‑Targets:
+      [{"id":..., "name":..., "coords":"x|y"}, ...]
+    """
+    driver = _make_driver(proxy_ip, proxy_port, proxy_user, proxy_pass)
+    driver.get(server_url + "/login.php")
+    time.sleep(2)
 
-    try:
-        print("🔐 Logge ein …")
-        driver.get("https://www.travian.com/international")
+    # **Anpassen** falls die Travian‑Login‑Form anders heißt
+    driver.find_element(By.NAME, "name").send_keys(username)
+    driver.find_element(By.NAME, "password").send_keys(password)
+    driver.find_element(By.XPATH, "//button[@type='submit']").click()
+    time.sleep(3)
 
-        time.sleep(3)
-        login_btn = driver.find_element(By.LINK_TEXT, "Login")
-        login_btn.click()
+    # Prüfen ob login erfolgreich
+    if "login" in driver.current_url.lower() or "fehler" in driver.page_source.lower():
+        driver.quit()
+        raise Exception("Travian login failed")
 
-        time.sleep(3)
-        driver.find_element(By.NAME, "name").send_keys(username)
-        driver.find_element(By.NAME, "password").send_keys(password)
-        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+    # Beispiel: Scrape Farm‑Liste (anpassen an das Travian‑DOM)
+    farms = []
+    for elem in driver.find_elements(By.CSS_SELECTOR, ".farmListRow"):
+        fid = elem.get_attribute("data-id")
+        name = elem.find_element(By.CSS_SELECTOR, ".farmName").text
+        coords= elem.find_element(By.CSS_SELECTOR, ".coords").text
+        farms.append({"id": fid, "name": name, "coords": coords})
 
-        time.sleep(5)
-        print("✅ Eingeloggt!")
+    driver.quit()
+    return farms
 
-        # Hier später: Farm-Listen Seite aufrufen
-        print("📄 Öffne Farm-Listen-Seite (Platzhalter)")
-        # Beispiel: driver.get("https://yourserver.travian.com/build.php?id=39
+def raid_one_farm(farm, server_url, proxy_ip=None, proxy_port=None,
+                  proxy_user=None, proxy_pass=None):
+    """
+    Führt genau eine Raid‑Aktion auf 'farm' aus.
+    Hier müsst ihr reinkodieren, wie Travian das auslöst.
+    """
+    # Stub: Im echten Code wieder neuen Driver öffnen,
+    # ins Dorf einsteigen und Angriff schicken!
+    time.sleep(1)
+    return {"farmId": farm["id"], "result": "ok"}
