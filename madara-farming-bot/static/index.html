@@ -1,152 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Travian Farming Bot</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded shadow">
-    <h1 class="text-3xl font-bold text-center mb-6">Travian Farming Bot</h1>
+    <meta charset="UTF-8">
+    <title>Travian Farming Bot</title>
+    <script defer>
+        let currentUser = "";
 
-    <!-- Login Form -->
-    <form id="login-form" class="space-y-4">
-      <div>
-        <label class="block font-semibold">Username</label>
-        <input type="text" id="username" class="w-full border p-2 rounded" required />
-      </div>
-      <div>
-        <label class="block font-semibold">Password</label>
-        <input type="password" id="password" class="w-full border p-2 rounded" required />
-      </div>
-      <div>
-        <label class="block font-semibold">Server URL (e.g. https://ts1.travian.com)</label>
-        <input type="text" id="server" class="w-full border p-2 rounded" required />
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block font-semibold">Proxy IP</label>
-          <input type="text" id="proxy_ip" class="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label class="block font-semibold">Proxy Port</label>
-          <input type="text" id="proxy_port" class="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label class="block font-semibold">Proxy Username</label>
-          <input type="text" id="proxy_user" class="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label class="block font-semibold">Proxy Password</label>
-          <input type="password" id="proxy_pass" class="w-full border p-2 rounded" />
-        </div>
-      </div>
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">
-        Login
-      </button>
-    </form>
+        async function handleLogin() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const server = document.getElementById("server").value.trim();
+            const proxy = document.getElementById("proxy").value.trim();
 
-    <div id="bot-panel" class="hidden mt-10 space-y-6">
-      <!-- Farm Lists -->
-      <div class="border p-4 rounded">
-        <div class="flex justify-between items-center">
-          <h2 class="text-xl font-semibold">Farm Lists</h2>
-          <button id="refresh-button" class="text-blue-600 underline">Refresh</button>
-        </div>
-        <ul id="farm-list" class="list-disc pl-5 mt-4 text-gray-800">
-          <!-- Filled dynamically -->
-        </ul>
-        <div id="farm-list-error" class="text-red-500 hidden mt-2">Failed to load farm lists</div>
-      </div>
+            if (!username || !password || !server) {
+                alert("Please fill in all fields.");
+                return;
+            }
 
-      <!-- Raid Settings -->
-      <div class="border p-4 rounded">
-        <h2 class="text-xl font-semibold mb-2">Raid Settings</h2>
-        <label>Min Interval (min): <input id="interval_min" type="number" value="10" class="border p-1 rounded w-20 ml-2" /></label>
-        <label class="ml-4">Max Interval (min): <input id="interval_max" type="number" value="15" class="border p-1 rounded w-20 ml-2" /></label>
-      </div>
+            const form = new FormData();
+            form.append("username", username);
+            form.append("password", password);
+            form.append("server_url", server);
+            form.append("proxy_ip", proxy.split(":")[0] || "");
+            form.append("proxy_port", proxy.split(":")[1] || "");
+            form.append("proxy_user", "");
+            form.append("proxy_pass", "");
 
-      <!-- Start Bot Button -->
-      <div class="text-center">
-        <button id="start-bot" class="bg-green-600 text-white px-6 py-2 rounded">Start Bot</button>
-      </div>
-    </div>
-  </div>
+            try {
+                const res = await fetch("/login", {
+                    method: "POST",
+                    body: form
+                });
+                const data = await res.json();
 
-  <script>
-    const form = document.getElementById("login-form");
-    const farmListEl = document.getElementById("farm-list");
-    const farmListError = document.getElementById("farm-list-error");
-    const botPanel = document.getElementById("bot-panel");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const data = new URLSearchParams();
-      data.append("username", document.getElementById("username").value);
-      data.append("password", document.getElementById("password").value);
-      data.append("server_url", document.getElementById("server").value);
-      data.append("proxy_ip", document.getElementById("proxy_ip").value);
-      data.append("proxy_port", document.getElementById("proxy_port").value);
-      data.append("proxy_user", document.getElementById("proxy_user").value);
-      data.append("proxy_pass", document.getElementById("proxy_pass").value);
-
-      const res = await fetch("/login", {
-        method: "POST",
-        body: data,
-      });
-
-      const result = await res.json();
-      if (res.ok) {
-        botPanel.classList.remove("hidden");
-        loadFarmLists();
-      } else {
-        alert("Login failed");
-      }
-    });
-
-    async function loadFarmLists() {
-      const username = document.getElementById("username").value;
-      try {
-        const res = await fetch(`/farmlist?username=${username}`);
-        const result = await res.json();
-
-        farmListEl.innerHTML = "";
-        farmListError.classList.add("hidden");
-
-        if (result.farms && result.farms.length > 0) {
-          result.farms.forEach(farm => {
-            const li = document.createElement("li");
-            li.textContent = farm;
-            farmListEl.appendChild(li);
-          });
-        } else {
-          farmListEl.innerHTML = "<li>No farm lists found</li>";
+                if (res.ok) {
+                    currentUser = username;
+                    document.getElementById("login-section").classList.add("hidden");
+                    document.getElementById("bot-section").classList.remove("hidden");
+                    loadFarmLists();
+                } else {
+                    alert("Login failed: " + (data?.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Login error: " + err);
+            }
         }
-      } catch (err) {
-        farmListError.classList.remove("hidden");
-      }
-    }
 
-    document.getElementById("refresh-button").addEventListener("click", loadFarmLists);
+        async function loadFarmLists() {
+            const listElement = document.getElementById("farm-list");
+            listElement.innerHTML = "<li>Loading...</li>";
+            try {
+                const res = await fetch(`/farmlist?username=${currentUser}`);
+                const data = await res.json();
 
-    document.getElementById("start-bot").addEventListener("click", async () => {
-      const username = document.getElementById("username").value;
-      const min = document.getElementById("interval_min").value;
-      const max = document.getElementById("interval_max").value;
+                if (res.ok) {
+                    listElement.innerHTML = "";
+                    data.farms.forEach(farm => {
+                        const li = document.createElement("li");
+                        li.textContent = farm;
+                        listElement.appendChild(li);
+                    });
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (err) {
+                listElement.innerHTML = `<li style="color:red;">Failed to load farm lists<br>${err.message}</li>`;
+            }
+        }
 
-      const data = new URLSearchParams();
-      data.append("username", username);
-      data.append("interval_min", min);
-      data.append("interval_max", max);
+        async function startBot() {
+            const min = document.getElementById("min-interval").value;
+            const max = document.getElementById("max-interval").value;
 
-      await fetch("/start-bot", {
-        method: "POST",
-        body: data,
-      });
+            const form = new FormData();
+            form.append("username", currentUser);
+            form.append("interval_min", min);
+            form.append("interval_max", max);
 
-      alert("Bot started!");
-    });
-  </script>
+            try {
+                const res = await fetch("/start-bot", {
+                    method: "POST",
+                    body: form
+                });
+
+                const data = await res.json();
+                alert(res.ok ? "Bot started successfully" : "Error: " + data.error);
+            } catch (err) {
+                alert("Start error: " + err.message);
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="login-section">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username"><br><br>
+    <input type="password" id="password" placeholder="Password"><br><br>
+    <input type="text" id="server" placeholder="https://ts9.x1.europe.travian.com"><br><br>
+    <input type="text" id="proxy" placeholder="Proxy (IP:PORT optional)"><br><br>
+    <button onclick="handleLogin()">Login</button>
+</div>
+
+<div id="bot-section" class="hidden">
+    <h2>Raid Settings</h2>
+    <label>Minimum Interval (min): <input type="number" id="min-interval" value="10"></label><br><br>
+    <label>Maximum Interval (min): <input type="number" id="max-interval" value="15"></label><br><br>
+    <button onclick="startBot()">Start Bot</button>
+
+    <h2>Farm Lists <button onclick="loadFarmLists()">Refresh</button></h2>
+    <ul id="farm-list"></ul>
+</div>
+
 </body>
 </html>
