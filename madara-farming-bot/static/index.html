@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,14 +35,15 @@
     <p><strong>Logged in as:</strong> <span id="current-user"></span></p>
 
     <div>
-      <label>Minimum Interval (min):</label>
+      <label>Minimum Interval (minutes):</label>
       <input id="interval-min" type="number" value="10" />
-      <label>Maximum Interval (min):</label>
+      <label>Maximum Interval (minutes):</label>
       <input id="interval-max" type="number" value="15" />
+      <p>+ Random Delay: 0–30 seconds</p>
     </div>
 
     <div>
-      <button onclick="startBot()">Start Bot</button>
+      <button onclick="startBot()">▶ Start Bot</button>
       <button onclick="loadFarmLists()">🔄 Refresh Farm Lists</button>
     </div>
 
@@ -66,13 +68,13 @@
 
       const result = await response.json();
       if (response.ok) {
-        document.getElementById("login-status").innerHTML = "✅ Login erfolgreich!";
+        document.getElementById("login-status").innerHTML = "✅ Login successful!";
         document.getElementById("login-section").classList.add("hidden");
         document.getElementById("bot-section").classList.remove("hidden");
         document.getElementById("current-user").textContent = username;
         loadFarmLists();
       } else {
-        document.getElementById("login-status").innerHTML = "❌ Fehler: " + result.error;
+        document.getElementById("login-status").innerHTML = "❌ Error: " + result.error;
       }
     });
 
@@ -88,7 +90,7 @@
           ul.appendChild(li);
         });
       } else {
-        ul.innerHTML = "<li>❌ Fehler beim Laden der Farm-Listen</li>";
+        ul.innerHTML = "<li>❌ Error loading farm lists</li>";
       }
     }
 
