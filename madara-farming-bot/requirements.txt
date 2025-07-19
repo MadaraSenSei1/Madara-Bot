@@ -1,5 +1,5 @@
-flask
-selenium
-chromedriver-autoinstaller
 fastapi
-python-multipart
+uvicorn[standard]
+python-dotenv
+selenium
+requests
