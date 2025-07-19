@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from bot.travian_bot import get_farm_lists, run_bot
 
 app = FastAPI()
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 user_sessions = {}
@@ -17,10 +18,10 @@ async def login(
     username: str = Form(...),
     password: str = Form(...),
     server_url: str = Form(...),
-    proxy_ip: str = Form(...),
-    proxy_port: str = Form(...),
-    proxy_user: str = Form(...),
-    proxy_pass: str = Form(...),
+    proxy_ip: str = Form(""),
+    proxy_port: str = Form(""),
+    proxy_user: str = Form(""),
+    proxy_pass: str = Form("")
 ):
     user_sessions[username] = {
         "password": password,
