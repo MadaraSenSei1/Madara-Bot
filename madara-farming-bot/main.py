@@ -1,15 +1,13 @@
-# main.py
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from bot.travian_bot import get_farm_lists, run_bot   # ← exact names
-
+from bot.travian_bot import get_farm_lists, run_bot
 import threading
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# In‑memory store for credentials
+# In‑memory user sessions
 user_sessions = {}
 
 @app.get("/", response_class=HTMLResponse)
@@ -28,10 +26,12 @@ async def login(
 ):
     user_sessions[username] = {
         "password": password,
-        "server_url": server_url,
+        "server_url": server_url.rstrip("/"),
         "proxy": {
-            "ip": proxy_ip, "port": proxy_port,
-            "username": proxy_user, "password": proxy_pass
+            "ip": proxy_ip,
+            "port": proxy_port,
+            "username": proxy_user,
+            "password": proxy_pass
         }
     }
     return JSONResponse({"message": "Login successful"})
@@ -42,7 +42,10 @@ async def farmlist(username: str):
         return JSONResponse({"error": "Not logged in"}, status_code=403)
     sess = user_sessions[username]
     farms = get_farm_lists(
-        username, sess["password"], sess["server_url"], sess["proxy"]
+        username,
+        sess["password"],
+        sess["server_url"],
+        sess["proxy"]
     )
     return JSONResponse({"farms": farms})
 
@@ -56,11 +59,17 @@ async def start_bot(
     if username not in user_sessions:
         return JSONResponse({"error": "Not logged in"}, status_code=403)
     sess = user_sessions[username]
+    # launch background thread
     threading.Thread(
         target=run_bot,
         args=(
-          username, sess["password"], sess["server_url"], sess["proxy"],
-          interval_min, interval_max, random_delay
+            username,
+            sess["password"],
+            sess["server_url"],
+            sess["proxy"],
+            interval_min,
+            interval_max,
+            random_delay
         ),
         daemon=True
     ).start()
