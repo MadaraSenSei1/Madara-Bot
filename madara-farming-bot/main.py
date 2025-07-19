@@ -1,40 +1,40 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+# main.py
+
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from bot.travian_bot import get_farm_lists
+import traceback
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# CORS aktivieren
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class LoginData(BaseModel):
-    username: str
-    password: str
-    server_url: str
-    proxy_ip: str = ""
-    proxy_port: str = ""
-    proxy_user: str = ""
-    proxy_pass: str = ""
+@app.get("/")
+def get_index():
+    return FileResponse("static/index.html")
 
 @app.post("/login")
-async def login(data: LoginData):
+async def login(
+    username: str = Form(...),
+    password: str = Form(...),
+    server_url: str = Form(...),
+    proxy_ip: str = Form(""),
+    proxy_port: str = Form(""),
+    proxy_user: str = Form(""),
+    proxy_pass: str = Form("")
+):
     try:
         farm_lists = get_farm_lists(
-            username=data.username,
-            password=data.password,
-            server_url=data.server_url,
-            proxy_ip=data.proxy_ip,
-            proxy_port=data.proxy_port,
-            proxy_user=data.proxy_user,
-            proxy_pass=data.proxy_pass
+            username=username,
+            password=password,
+            server_url=server_url,
+            proxy_ip=proxy_ip,
+            proxy_port=proxy_port,
+            proxy_user=proxy_user,
+            proxy_pass=proxy_pass
         )
-        return {"success": True, "farmLists": farm_lists}
+        return {"success": True, "farm_lists": farm_lists}
     except Exception as e:
-        print("Login failed:", e)
-        return {"success": False, "error": str(e)}
+        error_trace = traceback.format_exc()
+        print("ERROR during login:\n", error_trace)
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
