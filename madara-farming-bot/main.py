@@ -1,40 +1,37 @@
-# main.py
-
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from bot.travian_bot import get_farm_lists
-import traceback
+import uvicorn
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/")
-def get_index():
-    return FileResponse("static/index.html")
+# CORS erlauben
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # für Sicherheit besser Domains einschränken
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/login")
-async def login(
-    username: str = Form(...),
-    password: str = Form(...),
-    server_url: str = Form(...),
-    proxy_ip: str = Form(""),
-    proxy_port: str = Form(""),
-    proxy_user: str = Form(""),
-    proxy_pass: str = Form("")
-):
+async def login(request: Request):
+    data = await request.json()
+
     try:
-        farm_lists = get_farm_lists(
-            username=username,
-            password=password,
-            server_url=server_url,
-            proxy_ip=proxy_ip,
-            proxy_port=proxy_port,
-            proxy_user=proxy_user,
-            proxy_pass=proxy_pass
+        result = get_farm_lists(
+            data["username"],
+            data["password"],
+            data["server_url"],
+            data["proxy_ip"],
+            data["proxy_port"],
+            data["proxy_user"],
+            data["proxy_pass"]
         )
-        return {"success": True, "farm_lists": farm_lists}
+        return JSONResponse(content={"success": True, "result": result})
     except Exception as e:
-        error_trace = traceback.format_exc()
-        print("ERROR during login:\n", error_trace)
-        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
+        return JSONResponse(content={"success": False, "error": str(e)})
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
