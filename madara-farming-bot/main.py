@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from bot.travian_bot import get_farm_lists
