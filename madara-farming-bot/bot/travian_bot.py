@@ -5,7 +5,7 @@ import time
 import random
 
 
-def run_bot(username, password, proxy, interval_min, interval_max):
+def run_bot(username, password, proxy, interval_min, interval_max, server_url):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -33,17 +33,19 @@ def run_bot(username, password, proxy, interval_min, interval_max):
         time.sleep(5)
         print("✅ Eingeloggt!")
 
-        # Platzhalter für Farm-Logik
-        print("📦 Öffne Farm-Listen-Seite (Platzhalter)")
+        # Farm-List-Seite aufrufen
+        driver.get(f"https://{server_url}/build.php?id=39")
+        print("📦 Öffne Farm-Listen-Seite")
+        time.sleep(3)
 
-        # Beispiel:
-        # driver.get("https://ts9.x1.europe.travian.com/")
+        # Später: Farmen angreifen
+        print("🚀 Sende Angriffe... (Platzhalter)")
 
     finally:
         driver.quit()
 
 
-def get_farm_lists(username, password, proxy):
+def get_farm_lists(username, password, proxy, server_url):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -67,11 +69,11 @@ def get_farm_lists(username, password, proxy):
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         time.sleep(5)
 
-        # Rufe die Farm-Listen-Seite auf (→ passe die URL an!)
-        driver.get("https://ts1.travian.com/build.php?id=39")
+        # Rufe die Farm-Listen-Seite des angegebenen Servers auf
+        driver.get(f"https://{server_url}/build.php?id=39")
         time.sleep(3)
 
-        # Scrape die Farm-Listen (Platzhalter für echten Classname!)
+        # Scrape Farm-Listenelemente
         farm_elements = driver.find_elements(By.CLASS_NAME, "raidListSlotTitle")
         farms = [el.text for el in farm_elements if el.text.strip() != ""]
 
