@@ -3,22 +3,23 @@ import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 def get_farm_lists(username, password, server_url, proxy_ip="", proxy_port="", proxy_user="", proxy_pass=""):
+    # Setup Selenium with proxy (if provided)
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    if proxy_ip and proxy_port:
+        proxy_auth = f"{proxy_user}:{proxy_pass}@" if proxy_user and proxy_pass else ""
+        chrome_options.add_argument(f'--proxy-server=http://{proxy_auth}{proxy_ip}:{proxy_port}')
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
     try:
-        # Setup Selenium with proxy (if provided)
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-
-        if proxy_ip and proxy_port:
-            proxy_auth = f"{proxy_user}:{proxy_pass}@" if proxy_user and proxy_pass else ""
-            chrome_options.add_argument(f'--proxy-server=http://{proxy_auth}{proxy_ip}:{proxy_port}')
-
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-
         # Login to Travian
         driver.get(server_url)
         time.sleep(2)
@@ -39,29 +40,32 @@ def get_farm_lists(username, password, server_url, proxy_ip="", proxy_port="", p
             name = el.find_element(By.CLASS_NAME, "listTitleText").text
             farm_lists.append(name)
 
-        driver.quit()
         return farm_lists
 
     except Exception as e:
-        driver.quit()
         raise Exception(f"Travian error: {str(e)}")
+
+    finally:
+        driver.quit()
 
 
 def run_bot(
     username: str,
     password: str,
     server_url: str,
-    proxy: dict,
+    proxy_ip: str,
+    proxy_port: str,
+    proxy_user: str,
+    proxy_pass: str,
     interval_min: int,
     interval_max: int,
-    random_delay: bool
+    randomize: bool
 ):
     """Background loop: placeholder for actual raid logic."""
     while True:
-        print(f"[{username}] Starting raid cycle…")
-        # (Here you could fetch the farm list and dispatch attacks…)
-        wait_seconds = random.randint(interval_min, interval_max) * 60
-        if random_delay:
+        wait_seconds = random.randint(interval_min * 60, interval_max * 60)
+        if randomize:
             wait_seconds += random.randint(0, 30)
-        print(f"[{username}] Sleeping {wait_seconds}s before next cycle")
+        print(f"[{username}] Waiting {wait_seconds} seconds before next cycle")
         time.sleep(wait_seconds)
+        # TODO: Add actual farming/raiding logic here
