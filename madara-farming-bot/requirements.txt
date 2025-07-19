@@ -1,4 +1,4 @@
+fastapi
 flask
 selenium
 chromedriver-autoinstaller
-fastapi
