@@ -1,98 +1,102 @@
-<!-- static/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>Travian Bot</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Madara Farm Bot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>Travian Farming Bot</h1>
-  <form action="/login" method="post">
-    <input type="text" name="username" placeholder="Username" required /><br />
-    <input type="password" name="password" placeholder="Password" required /><br />
-    <input type="text" name="server_url" placeholder="https://ts1.example.com" required /><br />
-    <input type="text" name="proxy_ip" placeholder="Proxy IP" /><br />
-    <input type="text" name="proxy_port" placeholder="Proxy Port" /><br />
-    <input type="text" name="proxy_user" placeholder="Proxy User" /><br />
-    <input type="password" name="proxy_pass" placeholder="Proxy Password" /><br />
-    <button type="submit">Login</button>
-  </form>
-</body>
-</html>
-
-    <p id="error-msg" class="text-red-500 mt-4 hidden text-center">Login failed</p>
-    <div id="farm-list" class="hidden mt-6">
-      <h3 class="text-xl font-semibold mb-2">Farm Lists</h3>
-      <ul id="farms" class="list-disc list-inside"></ul>
-      <div class="mt-4 flex items-center space-x-2">
-        <input id="min-interval" type="number" placeholder="Min (s)" class="w-1/2 px-3 py-1 border rounded"/>
-        <input id="max-interval" type="number" placeholder="Max (s)" class="w-1/2 px-3 py-1 border rounded"/>
-      </div>
-      <button id="start-bot" class="bg-green-500 text-white w-full py-2 mt-4 rounded hover:bg-green-600">Start Bot</button>
-      <div class="mt-2 text-center font-mono" id="countdown">Ready</div>
-    </div>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">Madara Farm Bot</h1>
+    <div id="accounts"></div>
+    <button id="addBtn" class="mt-4 w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">
+      + Account hinzufügen
+    </button>
   </div>
 
+  <template id="accountTpl">
+    <div class="border p-4 mb-4 rounded">
+      <input placeholder="Username"    class="w-full mb-2 p-2 border rounded acc-username">
+      <input type="password" placeholder="Password" class="w-full mb-2 p-2 border rounded acc-password">
+      <input placeholder="Server URL" class="w-full mb-2 p-2 border rounded acc-server">
+      <input placeholder="Proxy IP"    class="w-full mb-2 p-2 border rounded acc-proxy-ip">
+      <input placeholder="Proxy Port"  class="w-full mb-2 p-2 border rounded acc-proxy-port">
+      <input placeholder="Proxy User"  class="w-full mb-2 p-2 border rounded acc-proxy-user">
+      <input type="password" placeholder="Proxy Pass" class="w-full mb-2 p-2 border rounded acc-proxy-pass">
+      <div class="flex gap-2">
+        <button class="startBtn flex-1 bg-blue-500 text-white py-1 rounded hover:bg-blue-600">Start</button>
+        <button class="stopBtn  flex-1 bg-red-500 text-white py-1 rounded hover:bg-red-600">Stop</button>
+      </div>
+      <div class="mt-2 text-sm">
+        Status: <span class="statusText">idle</span><br>
+        Farms: <pre class="farmData text-xs"></pre>
+      </div>
+    </div>
+  </template>
+
   <script>
-    const form = document.getElementById("login-form");
-    const errorMsg = document.getElementById("error-msg");
-    const farmList = document.getElementById("farm-list");
-    const farms = document.getElementById("farms");
-    const startBotBtn = document.getElementById("start-bot");
-    const countdownEl = document.getElementById("countdown");
+    const API = location.origin + '/api'
+    async function api(path, method='GET', body){
+      const opts = { method, headers: { 'Content-Type':'application/json' } }
+      if (body) opts.body = JSON.stringify(body)
+      const res = await fetch(API+path, opts)
+      if (!res.ok) throw await res.text()
+      return res.json()
+    }
 
-    let countdown;
-    let running = false;
+    async function loadAccounts(){
+      const accs = await api('/accounts')
+      const container = document.getElementById('accounts')
+      container.innerHTML = ''
+      const tpl = document.getElementById('accountTpl')
+      accs.forEach(acc=> {
+        const node = tpl.content.cloneNode(true)
+        const root = node.querySelector('div')
+        root.dataset.aid = acc.id
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const formData = Object.fromEntries(new FormData(form));
-      const res = await fetch("/login", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      if (data.success) {
-        errorMsg.classList.add("hidden");
-        farms.innerHTML = data.farmLists.map(f => `<li>${f}</li>`).join("");
-        farmList.classList.remove("hidden");
-      } else {
-        errorMsg.classList.remove("hidden");
-      }
-    });
+        root.querySelector('.acc-username').value = acc.username
+        root.querySelector('.acc-password').value = acc.password
+        root.querySelector('.acc-server').value   = acc.server_url
+        root.querySelector('.acc-proxy-ip').value = acc.proxy_ip
+        root.querySelector('.acc-proxy-port').value = acc.proxy_port
+        root.querySelector('.acc-proxy-user').value = acc.proxy_user
+        root.querySelector('.acc-proxy-pass').value = acc.proxy_pass
 
-    startBotBtn.addEventListener("click", () => {
-      if (!running) {
-        running = true;
-        startBotBtn.innerText = "Stop Bot";
-        startCountdown();
-      } else {
-        running = false;
-        clearInterval(countdown);
-        startBotBtn.innerText = "Start Bot";
-        countdownEl.innerText = "Stopped";
-      }
-    });
+        const statusText = root.querySelector('.statusText')
+        const farmData   = root.querySelector('.farmData')
 
-    function startCountdown() {
-      const min = parseInt(document.getElementById("min-interval").value);
-      const max = parseInt(document.getElementById("max-interval").value);
-      let seconds = randomInterval(min, max);
-      countdownEl.innerText = seconds + "s";
-
-      countdown = setInterval(() => {
-        seconds--;
-        countdownEl.innerText = seconds + "s";
-        if (seconds <= 0) {
-          seconds = randomInterval(min, max);
+        const refreshStatus = async ()=>{
+          const st = await api(`/accounts/${acc.id}/status`)
+          statusText.textContent = st.running ? 'running' : 'idle'
+          farmData.textContent = JSON.stringify(st.last_farms || [], null, 2)
         }
-      }, 1000);
+
+        root.querySelector('.startBtn').onclick = async ()=>{
+          const interval = 600  // 10min
+          await api(`/accounts/${acc.id}/start?interval=`+interval, 'POST')
+          refreshStatus()
+        }
+        root.querySelector('.stopBtn').onclick = async ()=>{
+          await api(`/accounts/${acc.id}/stop`, 'POST')
+          refreshStatus()
+        }
+        setInterval(refreshStatus, 5000)
+        container.appendChild(node)
+      })
     }
 
-    function randomInterval(min, max) {
-      return Math.floor(Math.random() * (max - min + 1) + min);
+    document.getElementById('addBtn').onclick = async ()=>{
+      const username = prompt("Username?")
+      const password = prompt("Password?")
+      const server   = prompt("Server URL?")
+      if (!username||!password||!server) return alert('Abbruch')
+      await api('/accounts', 'POST', {username, password, server_url:server})
+      loadAccounts()
     }
+
+    // beim Start
+    loadAccounts().catch(console.error)
   </script>
 </body>
 </html>
