@@ -6,7 +6,7 @@ import asyncio
 import random
 import threading
 
-from travian_bot import login_and_fetch_farms, run_farming_bot
+from bot.travian_bot import login_and_fetch_farms, run_farming_bot
 
 app = FastAPI()
 
