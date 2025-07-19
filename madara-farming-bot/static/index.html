@@ -1,176 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Travian Farming Bot</title>
-    <script>
-        async function login() {
-            const form = new FormData(document.getElementById("loginForm"));
-            const response = await fetch("/login", {
-                method: "POST",
-                body: form
-            });
-            const result = await response.json();
-            if (result.message) {
-                sessionStorage.setItem("username", form.get("username"));
-                document.getElementById("loginSection").style.display = "none";
-                document.getElementById("dashboard").style.display = "block";
-                loadFarmLists();
-            } else {
-                alert("Login failed!");
-            }
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travian Farming Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
 
-        async function loadFarmLists() {
-            const username = sessionStorage.getItem("username");
-            const response = await fetch(`/farmlist?username=${username}`);
-            const result = await response.json();
-            const container = document.getElementById("farmLists");
-            container.innerHTML = "";
+    .navbar {
+      background: #333;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+    }
 
-            if (result.farms && result.farms.length > 0) {
-                result.farms.forEach(farm => {
-                    const item = document.createElement("li");
-                    item.textContent = farm;
-                    container.appendChild(item);
-                });
-            } else {
-                container.innerHTML = "<li>⚠️ Failed to load farm lists.</li>";
-            }
-        }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #aaa;
+    }
 
-        async function startBot() {
-            const username = sessionStorage.getItem("username");
-            const form = new FormData();
-            form.append("username", username);
-            form.append("interval_min", document.getElementById("minInterval").value);
-            form.append("interval_max", document.getElementById("maxInterval").value);
-            form.append("random_delay", document.getElementById("randomDelay").checked);
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
 
-            await fetch("/start-bot", {
-                method: "POST",
-                body: form
-            });
+    .flex {
+      display: flex;
+      gap: 10px;
+    }
 
-            alert("Bot started!");
-        }
-    </script>
+    .farm-list {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    .timer {
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+      color: green;
+    }
+  </style>
 </head>
 <body>
-    <div id="loginSection">
-        <h2>Travian Farming Bot – Login</h2>
-        <form id="loginForm">
-            <input name="username" placeholder="Username" required><br>
-            <input name="password" type="password" placeholder="Password" required><br>
-            <input name="server_url" placeholder="Server URL (e.g. https://ts9.x1.europe.travian.com)" required><br>
-            <input name="proxy_ip" placeholder="Proxy IP"><br>
-            <input name="proxy_port" placeholder="Proxy Port"><br>
-            <input name="proxy_user" placeholder="Proxy Username"><br>
-            <input name="proxy_pass" placeholder="Proxy Password"><br>
-        </form>
-        <button onclick="login()">Login</button>
+  <div class="navbar">Travian Farming Bot</div>
+
+  <div class="container">
+    <div id="loginForm">
+      <h2>Login</h2>
+      <input type="text" id="username" placeholder="Travian Username" />
+      <input type="password" id="password" placeholder="Travian Password" />
+      <input type="text" id="server_url" placeholder="Server URL (e.g. https://ts1.travian.com)" />
+      <h3>Proxy Settings (optional)</h3>
+      <input type="text" id="proxy_ip" placeholder="Proxy IP" />
+      <input type="text" id="proxy_port" placeholder="Proxy Port" />
+      <input type="text" id="proxy_user" placeholder="Proxy Username" />
+      <input type="password" id="proxy_pass" placeholder="Proxy Password" />
+      <button onclick="login()">Login</button>
     </div>
 
-    <div id="dashboard" style="display:none;">
-        <h2>Farm Bot Dashboard</h2>
-        <p>Logged in as: <span id="usernameLabel"><script>document.write(sessionStorage.getItem("username"))</script></span></p>
-        <label>Minimum Interval (minutes):</label><br>
-        <input id="minInterval" type="number" value="10"><br>
-        <label>Maximum Interval (minutes):</label><br>
-        <input id="maxInterval" type="number" value="15"><br>
-        <label><input id="randomDelay" type="checkbox"> + Random Delay: 0–30 seconds</label><br>
-        <button onclick="startBot()">▶ Start Bot</button>
-        <button onclick="loadFarmLists()">🔄 Refresh Farm Lists</button>
-        <h4>Available Farm Lists</h4>
-        <ul id="farmLists"></ul>
+    <div id="dashboard" style="display: none;">
+      <div class="flex">
+        <input type="number" id="interval_min" placeholder="Min interval (min)" />
+        <input type="number" id="interval_max" placeholder="Max interval (min)" />
+      </div>
+      <button onclick="startBot()">Start Bot</button>
+      <button onclick="stopBot()">Stop Bot</button>
+      <div class="timer" id="countdownTimer"></div>
+      <button onclick="refreshFarmLists()">Refresh Farm Lists</button>
+
+      <h3>Farm Lists</h3>
+      <div class="farm-list" id="farmList"></div>
     </div>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Travian Farming Bot</title>
-    <script>
-        async function login() {
-            const form = new FormData(document.getElementById("loginForm"));
-            const response = await fetch("/login", {
-                method: "POST",
-                body: form
-            });
-            const result = await response.json();
-            if (result.message) {
-                sessionStorage.setItem("username", form.get("username"));
-                document.getElementById("loginSection").style.display = "none";
-                document.getElementById("dashboard").style.display = "block";
-                loadFarmLists();
-            } else {
-                alert("Login failed!");
-            }
+  </div>
+
+  <script>
+    let countdownInterval;
+
+    function login() {
+      const data = {
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        server_url: document.getElementById('server_url').value,
+        proxy: {
+          ip: document.getElementById('proxy_ip').value,
+          port: document.getElementById('proxy_port').value,
+          username: document.getElementById('proxy_user').value,
+          password: document.getElementById('proxy_pass').value
         }
+      };
 
-        async function loadFarmLists() {
-            const username = sessionStorage.getItem("username");
-            const response = await fetch(`/farmlist?username=${username}`);
-            const result = await response.json();
-            const container = document.getElementById("farmLists");
-            container.innerHTML = "";
-
-            if (result.farms && result.farms.length > 0) {
-                result.farms.forEach(farm => {
-                    const item = document.createElement("li");
-                    item.textContent = farm;
-                    container.appendChild(item);
-                });
-            } else {
-                container.innerHTML = "<li>⚠️ Failed to load farm lists.</li>";
-            }
+      fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('loginForm').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          showFarmLists(data.farms);
+        } else {
+          alert('Login failed: ' + data.error);
         }
+      });
+    }
 
-        async function startBot() {
-            const username = sessionStorage.getItem("username");
-            const form = new FormData();
-            form.append("username", username);
-            form.append("interval_min", document.getElementById("minInterval").value);
-            form.append("interval_max", document.getElementById("maxInterval").value);
-            form.append("random_delay", document.getElementById("randomDelay").checked);
+    function showFarmLists(farms) {
+      const list = document.getElementById('farmList');
+      list.innerHTML = '';
+      farms.forEach(farm => {
+        const div = document.createElement('div');
+        div.textContent = farm;
+        list.appendChild(div);
+      });
+    }
 
-            await fetch("/start-bot", {
-                method: "POST",
-                body: form
-            });
+    function startBot() {
+      const min = parseInt(document.getElementById('interval_min').value);
+      const max = parseInt(document.getElementById('interval_max').value);
+      if (isNaN(min) || isNaN(max)) return alert("Set valid min/max!");
 
-            alert("Bot started!");
+      fetch('/start-bot', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ interval_min: min, interval_max: max })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.next_delay_seconds) {
+          startCountdown(data.next_delay_seconds);
+        } else {
+          alert("Failed to start bot.");
         }
-    </script>
-</head>
-<body>
-    <div id="loginSection">
-        <h2>Travian Farming Bot – Login</h2>
-        <form id="loginForm">
-            <input name="username" placeholder="Username" required><br>
-            <input name="password" type="password" placeholder="Password" required><br>
-            <input name="server_url" placeholder="Server URL (e.g. https://ts9.x1.europe.travian.com)" required><br>
-            <input name="proxy_ip" placeholder="Proxy IP"><br>
-            <input name="proxy_port" placeholder="Proxy Port"><br>
-            <input name="proxy_user" placeholder="Proxy Username"><br>
-            <input name="proxy_pass" placeholder="Proxy Password"><br>
-        </form>
-        <button onclick="login()">Login</button>
-    </div>
+      });
+    }
 
-    <div id="dashboard" style="display:none;">
-        <h2>Farm Bot Dashboard</h2>
-        <p>Logged in as: <span id="usernameLabel"><script>document.write(sessionStorage.getItem("username"))</script></span></p>
-        <label>Minimum Interval (minutes):</label><br>
-        <input id="minInterval" type="number" value="10"><br>
-        <label>Maximum Interval (minutes):</label><br>
-        <input id="maxInterval" type="number" value="15"><br>
-        <label><input id="randomDelay" type="checkbox"> + Random Delay: 0–30 seconds</label><br>
-        <button onclick="startBot()">▶ Start Bot</button>
-        <button onclick="loadFarmLists()">🔄 Refresh Farm Lists</button>
-        <h4>Available Farm Lists</h4>
-        <ul id="farmLists"></ul>
-    </div>
+    function stopBot() {
+      clearInterval(countdownInterval);
+      document.getElementById('countdownTimer').textContent = '';
+    }
+
+    function startCountdown(seconds) {
+      const timer = document.getElementById('countdownTimer');
+      clearInterval(countdownInterval);
+
+      countdownInterval = setInterval(() => {
+        if (seconds <= 0) {
+          clearInterval(countdownInterval);
+          timer.textContent = 'Waiting for next run...';
+          return;
+        }
+        timer.textContent = `Next raid in ${seconds--} sec`;
+      }, 1000);
+    }
+
+    function refreshFarmLists() {
+      fetch('/get-farms')
+      .then(res => res.json())
+      .then(data => {
+        if (data.farms) {
+          showFarmLists(data.farms);
+        } else {
+          alert("Failed to fetch farm lists.");
+        }
+      });
+    }
+  </script>
 </body>
 </html>
