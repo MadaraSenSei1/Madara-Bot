@@ -1,6 +1,6 @@
 fastapi
-uvicorn
-selenium
-python-multipart
+uvicorn[standard]
 requests
 python-dotenv
+pydantic
+starlette
