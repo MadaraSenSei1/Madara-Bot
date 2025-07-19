@@ -1,9 +1,15 @@
 services:
   - type: web
-    name: madara-bot
-    runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
-    envVars:
-      - key: PORT
-        value: 10000
+    name: madara-farming-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    autoDeploy: true
+    routes:
+      - path: /
+        type: http
+      - path: /static
+        type: static
+        src: static
+        dest: /static
