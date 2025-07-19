@@ -5,6 +5,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException
 import time
+import os
+print("ENV:", os.environ)
 
 def get_farm_lists(username, password, server_url, proxy_ip, proxy_port, proxy_user, proxy_pass):
     chrome_options = Options()
@@ -18,15 +20,19 @@ def get_farm_lists(username, password, server_url, proxy_ip, proxy_port, proxy_u
         chrome_options.add_argument(f'--proxy-server={proxy}')
 
     try:
+        print(">>> Chrome gestartet")
         driver = webdriver.Chrome(options=chrome_options)
         driver.get(server_url)
         time.sleep(3)
 
         # Login
+        print(">>> Login attempt gestartet")
         driver.find_element(By.NAME, "name").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
-        driver.find_element(By.NAME, "s1").click()
-        time.sleep(3)
+        driver.find_element(By.XPATH, '//button[@type="submit"]').click()
+
+        print(">>> Login erfolgreich")
+    
 
         # Prüfung ob Login erfolgreich
         if "login" in driver.current_url or "fehler" in driver.page_source.lower():
