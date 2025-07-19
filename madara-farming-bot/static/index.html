@@ -1,132 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Travian Farming Bot</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Travian Farm Bot Dashboard</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .hidden { display: none; }
+    .btn { padding: .5rem 1rem; margin: .5rem 0; }
+    #farm-list ul { list-style: disc; margin-left: 2rem; }
+    #farm-list .error { color: red; }
+    label { display: block; margin-top: 1rem; }
+    input[type=text], input[type=password], input[type=number] { width: 100%; padding: .4rem; }
+  </style>
 </head>
-<body class="p-4">
-  <div class="container">
-    <h1 class="mb-4">Farm Bot Dashboard</h1>
+<body>
+  <h1>Travian Farm Bot</h1>
 
-    <!-- LOGIN FORM -->
-    <div id="login-section">
-      <form id="login-form">
-        <div class="mb-3">
-          <label class="form-label">Username</label>
-          <input type="text" class="form-control" id="username" name="username" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Password</label>
-          <input type="password" class="form-control" id="password" name="password" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Server URL</label>
-          <input type="url" class="form-control" id="server_url" name="server_url"
-                 placeholder="https://ts9.x1.europe.travian.com" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Proxy IP</label>
-          <input type="text" class="form-control" id="proxy_ip" name="proxy_ip">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Proxy Port</label>
-          <input type="text" class="form-control" id="proxy_port" name="proxy_port">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Proxy Username</label>
-          <input type="text" class="form-control" id="proxy_user" name="proxy_user">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Proxy Password</label>
-          <input type="password" class="form-control" id="proxy_pass" name="proxy_pass">
-        </div>
-        <button class="btn btn-primary" type="submit">Login</button>
-      </form>
-    </div>
+  <!-- LOGIN FORM -->
+  <div id="login-form">
+    <label>Username:
+      <input id="username" type="text">
+    </label>
+    <label>Password:
+      <input id="password" type="password">
+    </label>
+    <label>Server URL (e.g. https://ts9.x1.europe.travian.com):
+      <input id="server_url" type="text">
+    </label>
+    <label>Proxy IP:
+      <input id="proxy_ip" type="text">
+    </label>
+    <label>Proxy Port:
+      <input id="proxy_port" type="number">
+    </label>
+    <label>Proxy Username:
+      <input id="proxy_user" type="text">
+    </label>
+    <label>Proxy Password:
+      <input id="proxy_pass" type="password">
+    </label>
+    <button id="btn-login" class="btn">Login</button>
+    <div id="login-msg"></div>
+  </div>
 
-    <!-- DASHBOARD -->
-    <div id="dashboard" style="display:none;">
-      <p>Logged in as: <strong id="display-username"></strong></p>
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="hidden">
+    <p>Logged in as: <b id="dash-username"></b>
+      <button id="btn-logout" class="btn">Logout</button>
+    </p>
 
-      <div class="mb-3">
-        <label class="form-label">Minimum Interval (minutes)</label>
-        <input type="number" class="form-control" id="min-interval" value="10" min="1">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Maximum Interval (minutes)</label>
-        <input type="number" class="form-control" id="max-interval" value="15" min="1">
-      </div>
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="random-seconds">
-        <label class="form-check-label">Random Delay: 0–30 seconds</label>
-      </div>
+    <label>Minimum Interval (minutes):
+      <input id="interval_min" type="number" value="10">
+    </label>
+    <label>Maximum Interval (minutes):
+      <input id="interval_max" type="number" value="15">
+    </label>
+    <label><input id="random_delay" type="checkbox"> + Random Delay 0–30 seconds</label>
 
-      <button class="btn btn-success mb-2" id="start-bot-btn">▶ Start Bot</button>
-      <button class="btn btn-secondary mb-2" id="refresh-btn">🔄 Refresh Farm Lists</button>
+    <button id="btn-start" class="btn">▶ Start Bot</button>
+    <button id="btn-refresh" class="btn">🔄 Refresh Farm Lists</button>
 
-      <h3>Available Farm Lists</h3>
-      <ul id="farm-lists-container" class="list-group"></ul>
+    <div id="farm-list">
+      <h2>Available Farm Lists</h2>
+      <div id="farm-loading">Loading…</div>
+      <ul id="farm-items"></ul>
+      <div id="farm-error" class="error"></div>
     </div>
   </div>
 
   <script>
-    // Login handler
-    document.getElementById("login-form").onsubmit = async e => {
-      e.preventDefault();
-      const form = new FormData(e.target);
-      const res = await fetch("/login", { method: "POST", body: form });
-      const json = await res.json();
+    const loginForm = document.getElementById("login-form");
+    const dashboard = document.getElementById("dashboard");
+    let currentUser = "";
+
+    document.getElementById("btn-login").onclick = async () => {
+      const u = document.getElementById("username").value;
+      const p = document.getElementById("password").value;
+      const srv = document.getElementById("server_url").value;
+      const pi = document.getElementById("proxy_ip").value;
+      const pp = document.getElementById("proxy_port").value;
+      const pu = document.getElementById("proxy_user").value;
+      const pw = document.getElementById("proxy_pass").value;
+
+      const res = await fetch("/login", {
+        method: "POST",
+        headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ username:u, password:p, server_url:srv,
+                                    proxy_ip:pi, proxy_port:pp,
+                                    proxy_user:pu, proxy_pass:pw })
+      });
+      const j = await res.json();
       if (res.ok) {
-        const user = form.get("username");
-        document.getElementById("display-username").textContent = user;
-        document.getElementById("login-section").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
+        currentUser = u;
+        loginForm.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+        document.getElementById("dash-username").innerText = u;
         loadFarmLists();
       } else {
-        alert("Login failed: " + json.error);
+        document.getElementById("login-msg").innerText = j.error || j.message;
       }
     };
 
-    // Load farm lists
+    document.getElementById("btn-logout").onclick = () => {
+      currentUser = "";
+      loginForm.classList.remove("hidden");
+      dashboard.classList.add("hidden");
+    };
+
     async function loadFarmLists() {
-      const user = document.getElementById("username").value;
-      const res = await fetch(`/farmlist?username=${encodeURIComponent(user)}`);
-      const json = await res.json();
-      const container = document.getElementById("farm-lists-container");
-      container.innerHTML = "";
-      if (res.ok) {
-        json.farms.forEach(f => {
+      document.getElementById("farm-loading").style.display = "block";
+      document.getElementById("farm-items").innerHTML = "";
+      document.getElementById("farm-error").innerText = "";
+      try {
+        const res = await fetch(`/farmlist?username=${encodeURIComponent(currentUser)}`);
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || "Failed");
+        j.farms.forEach(name => {
           const li = document.createElement("li");
-          li.className = "list-group-item";
-          li.textContent = f;
-          container.appendChild(li);
+          li.innerText = name;
+          document.getElementById("farm-items").append(li);
         });
-      } else {
-        const li = document.createElement("li");
-        li.className = "list-group-item text-danger";
-        li.textContent = "Error: " + json.error;
-        container.appendChild(li);
+      } catch (err) {
+        document.getElementById("farm-error").innerText = err.message;
+      } finally {
+        document.getElementById("farm-loading").style.display = "none";
       }
     }
+    document.getElementById("btn-refresh").onclick = loadFarmLists;
 
-    // Refresh button
-    document.getElementById("refresh-btn").onclick = loadFarmLists;
-
-    // Start Bot handler
-    document.getElementById("start-bot-btn").onclick = async () => {
-      const form = new FormData();
-      form.set("username", document.getElementById("username").value);
-      form.set("interval_min", document.getElementById("min-interval").value);
-      form.set("interval_max", document.getElementById("max-interval").value);
-      form.set("random_delay", document.getElementById("random-seconds").checked);
-      const res = await fetch("/start-bot", { method: "POST", body: form });
-      const json = await res.json();
-      if (res.ok) {
-        alert("Bot started");
-      } else {
-        alert("Error: " + json.error);
-      }
+    document.getElementById("btn-start").onclick = async () => {
+      const min = document.getElementById("interval_min").value;
+      const max = document.getElementById("interval_max").value;
+      const rnd = document.getElementById("random_delay").checked;
+      await fetch("/start-bot", {
+        method: "POST",
+        headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          username: currentUser,
+          interval_min: min,
+          interval_max: max,
+          random_delay: rnd
+        })
+      });
+      alert("Bot started in background.");
     };
   </script>
 </body>
