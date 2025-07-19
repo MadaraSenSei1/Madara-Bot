@@ -1,11 +1,8 @@
 services:
   - type: web
-    name: madara-farming-bot
+    name: madara-bot
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port 10000"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10
     plan: free
-    region: oregon
+    buildCommand: ""  # leer lassen oder nur .render-build.sh
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port 10000
+    autoDeploy: true
