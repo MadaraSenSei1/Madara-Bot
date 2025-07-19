@@ -4,3 +4,4 @@ chromedriver-autoinstaller
 fastapi
 python-multipart
 uvicorn
+webdriver-manager
