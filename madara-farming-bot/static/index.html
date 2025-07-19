@@ -146,3 +146,66 @@
   </script>
 </body>
 </html>
+<script>
+  async function pollBotStatus(id) {
+    const res = await fetch(`/bot-status?account_id=${id}`);
+    const data = await res.json();
+
+    if (data.active && data.next_raid_timestamp) {
+      const interval = setInterval(() => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = data.next_raid_timestamp - now;
+        if (diff <= 0) {
+          document.getElementById(`${id}-countdown`).textContent = "Sending next raid...";
+          clearInterval(interval);
+        } else {
+          const m = Math.floor(diff / 60);
+          const s = diff % 60;
+          document.getElementById(`${id}-countdown`).textContent = `Next raid in ${m}m ${s}s`;
+        }
+      }, 1000);
+    }
+  }
+</script>
+
+<script>
+  const botIntervals = {}; // global
+
+  async function pollBotStatus(id) {
+    if (botIntervals[id]) clearInterval(botIntervals[id]);
+
+    const res = await fetch(`/bot-status?account_id=${id}`);
+    const data = await res.json();
+
+    if (data.active && data.next_raid_timestamp) {
+      const countdownEl = document.getElementById(`${id}-countdown`);
+      botIntervals[id] = setInterval(() => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = data.next_raid_timestamp - now;
+
+        if (diff <= 0) {
+          countdownEl.textContent = "Sending next raid...";
+          clearInterval(botIntervals[id]);
+        } else {
+          const m = Math.floor(diff / 60);
+          const s = diff % 60;
+          countdownEl.textContent = `Next raid in ${m}m ${s}s`;
+        }
+      }, 1000);
+    }
+  }
+
+  function startBot(id) {
+    const interval_min = parseInt(document.getElementById(`${id}-interval-min`).value);
+    const interval_max = parseInt(document.getElementById(`${id}-interval-max`).value);
+    const random_delay = document.getElementById(`${id}-random-delay`).checked;
+
+    fetch('/start-bot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id, interval_min, interval_max, random_delay })
+    }).then(() => pollBotStatus(id));
+  }
+</script>
+</body>
+</html>
