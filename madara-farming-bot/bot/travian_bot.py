@@ -1,36 +1,41 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import WebDriverException
-import time
+# bot/travian_bot.py
 
-def get_farm_lists(username, password, server_url, proxy_ip, proxy_port, proxy_user, proxy_pass):
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--no-sandbox")
+import requests
+from typing import List, Dict
 
-    if proxy_ip and proxy_port and proxy_user and proxy_pass:
-        proxy = f"http://{proxy_user}:{proxy_pass}@{proxy_ip}:{proxy_port}"
-        chrome_options.add_argument(f"--proxy-server={proxy}")
+def get_farm_lists(
+    username: str,
+    password: str,
+    server_url: str,
+    proxy_ip: str = "",
+    proxy_port: str = "",
+    proxy_user: str = "",
+    proxy_pass: str = ""
+) -> List[Dict]:
+    """
+    Loggt sich in Travian ein und gibt die Farm‑Listen zurück.
+    """
 
-    try:
-        driver = webdriver.Chrome(options=chrome_options)
-        driver.get(server_url)
-        time.sleep(3)
+    session = requests.Session()
 
-        driver.find_element(By.NAME, "name").send_keys(username)
-        driver.find_element(By.NAME, "password").send_keys(password)
-        driver.find_element(By.XPATH, '//button[@type="submit"]').click()
-        time.sleep(5)
+    # Proxy konfigurieren (optional)
+    if proxy_ip and proxy_port:
+        proxy_url = f"http://{proxy_user}:{proxy_pass}@{proxy_ip}:{proxy_port}"
+        session.proxies = {"http": proxy_url, "https": proxy_url}
 
-        if "login" in driver.current_url or "fehler" in driver.page_source.lower():
-            raise Exception("Login fehlgeschlagen")
+    # 1) Login
+    login_payload = {
+        "name": username,
+        "password": password,
+        "login": "Login"
+    }
+    resp = session.post(f"{server_url}/login.php", data=login_payload)
+    if resp.status_code != 200 or "login" in resp.url.lower():
+        raise Exception("Travian Login failed")
 
-        # Dummy-Liste zur Demonstration
-        farm_lists = [{"id": 1, "name": "Farm Nord"}, {"id": 2, "name": "Farm Süd"}]
-        driver.quit()
-        return farm_lists
+    # 2) Farm‑Listen abrufen
+    ajax_resp = session.get(f"{server_url}/ajax.php?cmd=getFarmLists")
+    ajax_resp.raise_for_status()
 
-    except WebDriverException as e:
-        raise Exception(f"Selenium Fehler: {e}")
+    data = ajax_resp.json()
+    return data  # erwartet List[{"id":..., "name":..., "farms":[...]}]
