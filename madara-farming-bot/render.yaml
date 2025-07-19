@@ -1,9 +1,11 @@
 services:
   - type: web
-    name: night-farming-bot
-    runtime: python
-    buildCommand: ""
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
+    name: madara-farming-bot
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port 10000"
     envVars:
-      - key: PORT
-        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.10
+    plan: free
+    region: oregon
