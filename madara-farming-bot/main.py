@@ -18,10 +18,10 @@ async def login(
     username: str = Form(...),
     password: str = Form(...),
     server_url: str = Form(...),
-    proxy_ip: str = Form(""),
-    proxy_port: str = Form(""),
-    proxy_user: str = Form(""),
-    proxy_pass: str = Form("")
+    proxy_ip: str = Form(...),
+    proxy_port: str = Form(...),
+    proxy_user: str = Form(...),
+    proxy_pass: str = Form(...)
 ):
     user_sessions[username] = {
         "password": password,
