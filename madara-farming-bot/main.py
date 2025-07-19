@@ -43,17 +43,23 @@ async def login(
 
 # 5) Farm‑list endpoint (GET /farmlist?username=...)
 @app.get("/farmlist")
-async def farmlist(username: str = Query(..., description="The username that previously logged in")):
+async def farmlist(username: str = Query(..., description="Your login username")):
     if username not in user_sessions:
         raise HTTPException(status_code=403, detail="Not logged in")
     conf = user_sessions[username]
-    farms = get_farm_lists(
-        username,
-        conf["password"],
-        conf["proxy"],
-        conf["server_url"],
-    )
-    return JSONResponse({"farms": farms})
+
+    try:
+        farms = get_farm_lists(
+            username,
+            conf["password"],
+            conf["proxy"],
+            conf["server_url"],
+        )
+        return JSONResponse({"farms": farms})
+    except Exception:
+        tb = traceback.format_exc()
+        # send back full Python traceback so you can see exactly what failed
+        return JSONResponse({"error": tb}, status_code=500)
 
 # 6) Start‑bot endpoint (POST /start-bot)
 @app.post("/start-bot")
