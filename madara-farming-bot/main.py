@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from bot.travian_bot import run_bot, get_farm_lists
 import os
@@ -10,14 +10,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 user_sessions = {}
 
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     return FileResponse("static/index.html")
+
 
 @app.post("/login")
 async def login(
     username: str = Form(...),
     password: str = Form(...),
+    server_url: str = Form(...),
     proxy_ip: str = Form(...),
     proxy_port: str = Form(...),
     proxy_user: str = Form(...),
@@ -25,6 +28,7 @@ async def login(
 ):
     user_sessions[username] = {
         "password": password,
+        "server_url": server_url,
         "proxy": {
             "ip": proxy_ip,
             "port": proxy_port,
@@ -34,21 +38,21 @@ async def login(
     }
     return JSONResponse({"message": "Login gespeichert"})
 
+
 @app.get("/farmlist")
 async def get_farmlist(username: str):
     if username not in user_sessions:
         return JSONResponse({"error": "Nicht eingeloggt"}, status_code=403)
 
     session = user_sessions[username]
-    password = session["password"]
-    proxy = session["proxy"]
+    farms = get_farm_lists(
+        username,
+        session["password"],
+        session["proxy"],
+        session["server_url"]
+    )
+    return JSONResponse({"farms": farms})
 
-    # Call bot logic to scrape farm list
-    try:
-        farms = get_farm_lists(username, password, proxy)
-        return JSONResponse({"farms": farms})
-    except Exception as e:
-        return JSONResponse({"error": f"Fehler beim Abrufen der Farmliste: {str(e)}"}, status_code=500)
 
 @app.post("/start-bot")
 async def start_bot(
@@ -60,11 +64,17 @@ async def start_bot(
     if not session:
         return JSONResponse({"error": "Nicht eingeloggt"}, status_code=403)
 
-    password = session["password"]
-    proxy = session["proxy"]
+    run_bot(
+        username,
+        session["password"],
+        session["proxy"],
+        interval_min,
+        interval_max,
+        session["server_url"]
+    )
 
-    run_bot(username, password, proxy, interval_min, interval_max)
-    return JSONResponse({"message": "Bot gestartet!"})
+    return JSONResponse({"message": "Bot gestartet"})
+
 
 if __name__ == "__main__":
     import uvicorn
