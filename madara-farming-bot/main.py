@@ -10,7 +10,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 user_sessions = {}
 
-
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     return FileResponse("static/index.html")
@@ -51,6 +50,7 @@ async def get_farmlist(username: str):
         session["proxy"],
         session["server_url"]
     )
+
     return JSONResponse({"farms": farms})
 
 
@@ -72,10 +72,4 @@ async def start_bot(
         interval_max,
         session["server_url"]
     )
-
     return JSONResponse({"message": "Bot gestartet"})
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=10000)
